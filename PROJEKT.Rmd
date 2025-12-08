@@ -10,7 +10,10 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-#install.packages("readr")
+# Biblioteki:
+library(readr)
+library(skimr)
+library(dplyr)
 ```
 
 ## 1. Motywacja i cel pracy
@@ -56,8 +59,6 @@ o	alkohol
 o	jakość (ocena 0–10)
 
 ```{r wine}
-library(readr)
-library(skimr)
 wina <- read.csv("winequality-white.csv", header=TRUE, sep=';')
 summary(wina)
 str(wina)
