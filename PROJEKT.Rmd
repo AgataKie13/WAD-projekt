@@ -9,8 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r cars}
-summary(cars)
+```{r wine}
+library(readr)
+wina <- read.csv("winequality-white.csv", header=TRUE, sep=';')
+summary(wina)
+str(wina)
 ```
 
 ## Including Plots
