@@ -17,7 +17,9 @@ library(skimr)
 library(dplyr)
 ```
 
-## 1. Motywacja i cel pracy
+# 1. Wprowadzenie
+
+## 1.1. Motywacja i cel pracy
 
 ::: {style="text-align: justify;"}
 Produkcja wina to proces, nad którym na co dzień rzadko się
@@ -50,7 +52,7 @@ uporządkować dane i wydobyć najważniejsze informacje.
 -   ocena przydatności zastosowanych metod w analizie jakości wina.
 :::
 
-## 2. Opis problemu badawczego
+## 1.2. Opis problemu badawczego
 
 ::: {style="text-align: justify;"}
 Powyżej przedstawiony został ogólny zarys poruszanego problemu
@@ -68,7 +70,7 @@ W związku z tym w projekcie należy odpowiedzieć na kilka głównych pytań:
     strukturę danych i uprościć ich interpretację?
 :::
 
-## 3. Opis danych
+## 1.3. Opis danych
 
 ::: {style="text-align: justify;"}
 Dane wykorzystane w projekcie pochodzą z bezpłatnego repozytorium UC
@@ -145,17 +147,59 @@ metadata <- wina %>%
 
 metadata
 ```
+
+# 2. Analiza eksploracyjna danych
+
+## 2.1. Podstawowe statystyki opisowe
+(średnia, mediana, odchylenie standardowe, kwartyle
+
 ```{r}
+#install.packages("gtsummary")
+library(gtsummary)
+
+wina %>%
+  tbl_summary(
+    by = jakość,
+    statistic = list(
+      all_continuous() ~ "{mean} ({p25}; {p50}; {p75}; {min}; {max})",  
+      all_categorical() ~ "{n} ({p}%)"                           
+    )
+  ) %>%
+  modify_caption("**Tabela 1. Statystyki opisowe według jakości wina**") %>%
+  modify_footnote(
+    all_stat_cols() ~ "Zmienne ciągłe: średnia (kwantyl 1; mediana; kwantyl 3; minimum; maksimum); zmienne kategoryczne: liczność (%); Brakujące dane zostały wykluczone z analizy."
+  ) %>%
+  add_p() %>%
+  bold_labels()  # pogrubienie nazw zmiennych
+
+
+
+packageVersion("gt")
+packageVersion("htmltools")
+packageVersion("gtsummary")
+
+install.packages(c("gt", "htmltools"))
+
+
 
 ```
 
-## Including Plots
+## 2.2. Analiza rozkładów
 
-You can also embed plots, for example:
+## 2.3. Analiza korelacji
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+## 2.4. Analiza braków danych
+
+```{r}
+print(colSums(is.na(dane)))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to
-prevent printing of the R code that generated the plot.
+## 2.5. Analiza obserwacji odstających
+
+## 2.6. Zidentyfikuj potencjalne obserwacje odstające
+
+
+
+
+
+
