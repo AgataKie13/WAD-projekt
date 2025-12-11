@@ -98,41 +98,55 @@ określono również, które zmienne objaśniające są *stymulantami*, a które
 
 *Zmienne objaśniające:*
 
--   **stała kwasowość**
--   **lotna kwasowość**
--   **kwas cytrynowy**
--   **cukier resztkowy**
--   **chlorki**
--   **wolny dwutlenek siarki**
--   **całkowity dwutlenek siarki**
--   **gęstość**
--   **pH**
--   **siarczany**
--   **alkohol**
+-   **stała kwasowość** destymulanta
+-   **lotna kwasowość** destymulanta
+-   **kwas cytrynowy** stymulanta
+-   **cukier resztkowy** destymulanta
+-   **chlorki** destymulanta
+-   **wolny dwutlenek siarki** destymulanta
+-   **całkowity dwutlenek siarki** destymulanta
+-   **gęstość** destymulanta
+-   **pH** stymulanta
+-   **siarczany** stymulanta
+-   **alkohol** stymulanta
 :::
 
 ```{r wine, echo=FALSE, results='asis'}
 wina <- read.csv("winequality-white.csv", header=TRUE, sep=';')
+wina <- wina %>%
+  rename(
+    stała_kwasowość             = fixed.acidity,
+    lotna_kwasowość             = volatile.acidity,
+    kwas_cytrynowy              = citric.acid,
+    cukier_resztkowy            = residual.sugar,
+    chlorki                     = chlorides,
+    wolny_dwutlenek_siarki      = free.sulfur.dioxide,
+    całkowity_dwutlenek_siarki  = total.sulfur.dioxide,
+    gęstość                     = density,
+    siarczany                   = sulphates,
+    jakość                      = quality
+  )
 
-# Nazwa zmiennej wynikowej
-target <- "quality"   # <-- zmień jeśli masz inną
+target <- "quality"
 
 metadata <- wina %>%
   summarise(
-    n_rows = n(),
-    n_cols = ncol(.)
+    liczba_wierszy = n(),
+    liczba_kolumn = ncol(.)
   ) %>%
   bind_cols(
     tibble(
-      variable = names(wina),
-      type = sapply(wina, function(x) class(x)[1]),
-      n_unique = sapply(wina, function(x) length(unique(x))),
-      is_target = names(wina) == target,
-      stimulant_destimulant = NA_character_   # uzupełnij ręcznie
+      zmienna = names(wina),
+      typ_danych = sapply(wina, function(x) class(x)[1]),
+      stymulanta_destymulanta = c("destymulanta", "destymulanta", "stymulanta", "destymulanta", "destymulanta",
+  "destymulanta", "destymulanta", "destymulanta", "stymulanta", "stymulanta", "stymulanta", "zmienna objaśniania")
     )
   )
 
 metadata
+```
+```{r}
+
 ```
 
 ## Including Plots
