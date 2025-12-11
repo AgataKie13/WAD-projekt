@@ -15,6 +15,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(skimr)
 library(dplyr)
+library(corrplot) 
+library(psych)  
+library(PerformanceAnalytics) 
 ```
 
 # 1. Wprowadzenie
@@ -125,81 +128,151 @@ wina <- wina %>%
     wolny_dwutlenek_siarki      = free.sulfur.dioxide,
     całkowity_dwutlenek_siarki  = total.sulfur.dioxide,
     gęstość                     = density,
+    pH                          = pH,
     siarczany                   = sulphates,
+    alkohol                     = alcohol,
     jakość                      = quality
   )
 
+stymulanty <- c("kwas_cytrynowy", "pH", "siarczany", "alkohol")
+destymulanty <- c("stała_kwasowość", "lotna_kwasowość", "cukier_resztkowy", "chlorki", "wolny_dwutlenek_siarki", "całkowity_dwutlenek_siarki", "gęstość")
+
 target <- "quality"
 
-metadata <- wina %>%
-  summarise(
-    liczba_wierszy = n(),
-    liczba_kolumn = ncol(.)
-  ) %>%
-  bind_cols(
-    tibble(
-      zmienna = names(wina),
-      typ_danych = sapply(wina, function(x) class(x)[1]),
-      stymulanta_destymulanta = c("destymulanta", "destymulanta", "stymulanta", "destymulanta", "destymulanta",
-  "destymulanta", "destymulanta", "destymulanta", "stymulanta", "stymulanta", "stymulanta", "zmienna objaśniania")
-    )
+metadata <- tibble(
+  zmienna = names(wina),
+  typ_danych = sapply(wina, class),
+  stymulanta_destymulanta = case_when(
+    names(wina) %in% stymulanty ~ "stymulanta",
+    names(wina) %in% destymulanty ~ "destymulanta",
+    TRUE ~ "zmienna objaśniana"
   )
+)
 
 metadata
+
 ```
 
 # 2. Analiza eksploracyjna danych
 
 ## 2.1. Podstawowe statystyki opisowe
-(średnia, mediana, odchylenie standardowe, kwartyle
+
+średnia, mediana, odchylenie standardowe, kwartyle
+
+TRZEBABY TO JAKOŚ UŁADNIĆ, ALE CZAT NIE WSPÓŁPRACUJE - CHOĆ Z DRUGIEJ STRONY PANI NIGDZIE NIE PODAWAŁA INNYCH KODÓW
 
 ```{r}
-#install.packages("gtsummary")
-library(gtsummary)
-
-wina %>%
-  tbl_summary(
-    by = jakość,
-    statistic = list(
-      all_continuous() ~ "{mean} ({p25}; {p50}; {p75}; {min}; {max})",  
-      all_categorical() ~ "{n} ({p}%)"                           
-    )
-  ) %>%
-  modify_caption("**Tabela 1. Statystyki opisowe według jakości wina**") %>%
-  modify_footnote(
-    all_stat_cols() ~ "Zmienne ciągłe: średnia (kwantyl 1; mediana; kwantyl 3; minimum; maksimum); zmienne kategoryczne: liczność (%); Brakujące dane zostały wykluczone z analizy."
-  ) %>%
-  add_p() %>%
-  bold_labels()  # pogrubienie nazw zmiennych
-
-
-
-packageVersion("gt")
-packageVersion("htmltools")
-packageVersion("gtsummary")
-
-install.packages(c("gt", "htmltools"))
-
-
-
+summary(wina)
 ```
 
 ## 2.2. Analiza rozkładów
 
+```{r}
+par(mfrow = c(2, 2))
+hist(wina$alkohol,
+     main = "Rozkład zmiennej alkohol",
+     xlab = "Wartości",
+     ylab = "Częstość",
+     col = "skyblue",
+     border = "black")
+
+plot(density(wina$alkohol),
+     main = "Wykres gęstości zmiennej alkohol",
+     xlab = "Alkohol",
+     ylab = "Gęstość")
+
+hist(wina$lotna_kwasowość,
+     main = "Rozkład zmiennej lotna kwasowość",
+     xlab = "Wartości",
+     ylab = "Częstość",
+     col = "skyblue",
+     border = "black")
+
+plot(density(wina$lotna_kwasowość),
+     main = "Wykres gęstości zmiennej
+     lotna kwasowość",
+     xlab = "Lotna kwasowość",
+     ylab = "Gęstość")
+
+```
+KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność, obecność ogonów itp.)
+
 ## 2.3. Analiza korelacji
+
+```{r}
+# 1. MACIERZ KORELACJI PEARSONA
+macierz_korelacji <- cor(wina, method = "pearson")
+
+# 1.2. WIZUALIZACJA MACIERZY KORELACJI
+corrplot(macierz_korelacji, 
+         method = "circle", 
+         type = "upper",
+         title = "Macierz korelacji - metoda kółek",
+         mar = c(0,0,1,0))
+```
+::: {style="text-align: justify;"}
+Z analizy macierzy korelacji można wywnioskować, że najsilniejsze zależności występują odpowiednio między
+
+```{r}
+
+# 2. TESTY ISTOTNOŚCI KORELACJI
+cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
+cat("\n2.1. Test istotności korelacji zmiennych jakość i alkohol:\n")
+cor_test_results1 <- cor.test(wina$jakość, wina$alkohol)
+cat("r =", round(cor_test_results1$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results1$p.value, 5), "\n")
+cat("\n2.2. Test istotności korelacji zmiennych jakość i lotna kwasowość:\n")
+cor_test_results2 <- cor.test(wina$alkohol, wina$lotna_kwasowość)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+```
+
+```{r}
+# 3. Kompleksowa analiza korelacji z PerformanceAnalytics
+chart.Correlation(wina, histogram = TRUE, pch = 19)
+
+```
 
 ## 2.4. Analiza braków danych
 
 ```{r}
-print(colSums(is.na(dane)))
+print(colSums(is.na(wina)))
 ```
 
 ## 2.5. Analiza obserwacji odstających
 
-## 2.6. Zidentyfikuj potencjalne obserwacje odstające
 
 
+# 3. Obróbka zmiennych
 
+## 3.1. Obsługa obserwacji odstających - jeśli występują
+
+## 3.2. Tworzenie nowych zmiennych
+
+## 3.3. Standaryzacja i normalizacja
+
+# 4. ZASTOSOWANIE METOD WIELOWYMIAROWYCH 
+
+## 4.1. PCA – Analiza głównych składowych 
+
+PCA umożliwia redukcję wymiarowości oraz ocenę, które zmienne wyjaśniają największą część wariancji. Zostaną przedstawione wartości własne, wykres osypiska oraz biplot. 
+
+Jeśli stosowano metody redukcji wymiaru (np. PCA), opisz: 
+
+• jakie dane weszły do analizy, 
+
+• ile składowych wybrano i dlaczego, 
+
+• jaka część wariancji została wyjaśniona. 
+
+## 4.2 Analiza skupień 
+
+Zostaną zastosowane metody k-średnich oraz hierarchiczna metoda Warda. Wyniki obejmą dendrogram, wykresy skupień oraz interpretację klastrów względem zmiennych chemicznych. 
+
+# 5. PORÓWNANIE METOD I WIZUALIZACJE 
+
+Porównane zostaną wyniki PCA i klasteryzacji, a także ich interpretacje. Wizualizacje obejmą m.in. biploty, wykresy skupień oraz wykresy 2D/3D (każdy wykres powinien mieć opis i krótki komentarz)
 
 
 
