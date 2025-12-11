@@ -10,6 +10,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 # Biblioteki:
 library(readr)
 library(skimr)
@@ -18,50 +19,100 @@ library(dplyr)
 
 ## 1. Motywacja i cel pracy
 
-Produkcja wina to proces, nad którym na co dzień rzadko się zastanawiamy, choć sam napój towarzyszy wielu ważnym wydarzeniom. Jednocześnie dostępne są obszerne dane opisujące właściwości chemiczne win – zarówno czerwonych, jak i białych. Skoro dysponujemy tak bogatym materiałem, warto z niego skorzystać, aby sprawdzić, które parametry wpływają na jakość wina. W projekcie skupimy się jednak na jednym wybranym zbiorze danych, aby analiza była bardziej przejrzysta. Wino powstaje w wyniku szeregu złożonych procesów, które wymagają kontroli wielu cech fizykochemicznych, takich jak kwasowość, zawartość alkoholu, poziom cukrów resztkowych, gęstość czy pH. To właśnie te parametry w dużej mierze decydują o ostatecznej ocenie trunku przez ekspertów. Ponieważ zmiennych jest wiele i są ze sobą powiązane, trudno analizować je pojedynczo, dlatego w projekcie zastosowano metody wielowymiarowej analizy danych. Celem projektu jest lepsze zrozumienie zależności między właściwościami wina oraz określenie, które z nich najbardziej wpływają na jego jakość. W tym celu wykorzystano m.in. analizę PCA, metody klasteryzacji oraz inne techniki eksploracyjne, które pomagają uporządkować dane i wydobyć najważniejsze informacje.
+::: {style="text-align: justify;"}
+Produkcja wina to proces, nad którym na co dzień rzadko się
+zastanawiamy, choć sam napój towarzyszy wielu ważnym wydarzeniom.
+Jednocześnie dostępne są obszerne dane opisujące właściwości chemiczne
+win – zarówno czerwonych, jak i białych. Skoro dysponujemy tak bogatym
+materiałem, warto z niego skorzystać, aby sprawdzić, które parametry
+wpływają na jakość wina. W projekcie skupimy się jednak na jednym
+wybranym zbiorze danych, aby analiza była bardziej przejrzysta. Wino
+powstaje w wyniku szeregu złożonych procesów, które wymagają kontroli
+wielu cech fizykochemicznych, takich jak kwasowość, zawartość alkoholu,
+poziom cukrów resztkowych, gęstość czy pH. To właśnie te parametry w
+dużej mierze decydują o ostatecznej ocenie trunku przez ekspertów.
+Ponieważ zmiennych jest wiele i są ze sobą powiązane, trudno analizować
+je pojedynczo, dlatego w projekcie zastosowano metody wielowymiarowej
+analizy danych. Celem projektu jest lepsze zrozumienie zależności między
+właściwościami wina oraz określenie, które z nich najbardziej wpływają
+na jego jakość. W tym celu wykorzystano m.in. analizę PCA, metody
+klasteryzacji oraz inne techniki eksploracyjne, które pomagają
+uporządkować dane i wydobyć najważniejsze informacje.
+
 **Główne cele projektu to:**
-• zbadanie zależności między właściwościami fizykochemicznymi wina,
-• identyfikacja zmiennych, które najsilniej wpływają na ocenę jakości,
-• zastosowanie PCA do redukcji wymiarowości i interpretacji składowych,
-• wykrycie naturalnych grup win przy użyciu metod analizy skupień (klastrów),
-• ocena przydatności zastosowanych metod w analizie jakości wina.
+
+-   zbadanie zależności między właściwościami fizykochemicznymi wina,
+-   identyfikacja zmiennych, które najsilniej wpływają na ocenę jakości,
+-   zastosowanie PCA do redukcji wymiarowości i interpretacji
+    składowych,
+-   wykrycie naturalnych grup win przy użyciu metod analizy skupień
+    (klastrów),
+-   ocena przydatności zastosowanych metod w analizie jakości wina.
+:::
 
 ## 2. Opis problemu badawczego
-Powyżej przedstawiony został ogólny zarys poruszanego problemu badawczego. Nietrudno zauważyć, że zmiennych opisujących wino jest wiele, a ich wzajemne relacje są złożone i trudne do oceny bez odpowiednich metod statystycznych. W związku z tym w projekcie należy odpowiedzieć na kilka głównych pytań:
-•	Które parametry fizykochemiczne są ze sobą najsilniej powiązane?
-•	Które zmienne w największym stopniu wpływają na ocenę jakości wina?
-•	Czy dane wina można uporządkować w naturalne grupy, np. na podstawie podobieństwa chemicznego?
-•	Czy redukcja wymiarowości (np. PCA) pozwala lepiej zrozumieć strukturę danych i uprościć ich interpretację?
+
+::: {style="text-align: justify;"}
+Powyżej przedstawiony został ogólny zarys poruszanego problemu
+badawczego. Nietrudno zauważyć, że zmiennych opisujących wino jest
+wiele, a ich wzajemne relacje są złożone i trudne do oceny bez
+odpowiednich metod statystycznych.
+
+W związku z tym w projekcie należy odpowiedzieć na kilka głównych pytań:
+
+-   Które parametry fizykochemiczne są ze sobą najsilniej powiązane?
+-   Które zmienne w największym stopniu wpływają na ocenę jakości wina?
+-   Czy dane wina można uporządkować w naturalne grupy, np. na podstawie
+    podobieństwa chemicznego?
+-   Czy redukcja wymiarowości (np. PCA) pozwala lepiej zrozumieć
+    strukturę danych i uprościć ich interpretację?
+:::
 
 ## 3. Opis danych
-Dane wykorzystane w projekcie pochodzą z bezpłatnego repozytorium UC Irvine Machine Learning Repository i są dostępne pod adresem Wine Quality. Zbiór dotyczy win z regionu Vinho Verde i stanowi kompletny oraz liczny materiał, dobrze przystosowany do analiz wielowymiarowych.
 
-*dostęp:*
-https://archive.ics.uci.edu/dataset/186/wine+quality 
-P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. 
-Modeling wine preferences by data mining from physicochemical properties.
-In Decision Support Systems, Elsevier, 47(4):547-553. ISSN: 0167-9236.
+::: {style="text-align: justify;"}
+Dane wykorzystane w projekcie pochodzą z bezpłatnego repozytorium UC
+Irvine Machine Learning Repository i są dostępne pod adresem Wine
+Quality. Zbiór dotyczy win z regionu Vinho Verde i stanowi kompletny
+oraz liczny materiał, dobrze przystosowany do analiz wielowymiarowych.
 
-W projekcie wykorzystano część danych dotyczącą wina białego, obejmującą 4898 obserwacji oraz 12 zmiennych – 11 fizykochemicznych i jedną wynikową quality, ocenianą w skali 0–10. Wszystkie zmienne mają charakter ilościowy, dzięki czemu możliwe jest stosowanie metod opartych na macierzy korelacji, PCA oraz analizie klastrów. Zmienne wejściowe odzwierciedlają parametry chemiczne uzyskane w testach laboratoryjnych, natomiast zmienna wyjściowa opiera się na sensorycznej ocenie jakości. Struktura danych wygląda następująco:
-•	Zmienne wejściowe:
-o	stała kwasowość
-o	lotna kwasowość
-o	kwas cytrynowy
-o	cukier resztkowy
-o	chlorki
-o	wolny dwutlenek siarki
-o	całkowity dwutlenek siarki
-o	gęstość
-o	pH
-o	siarczany
-o	alkohol
-•	Zmienna wyjściowa:
-o	jakość (ocena 0–10)
+*dostęp:* <https://archive.ics.uci.edu/dataset/186/wine+quality> P.
+Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. Modeling wine
+preferences by data mining from physicochemical properties. In Decision
+Support Systems, Elsevier, 47(4):547-553. ISSN: 0167-9236.
 
-```{r wine}
+W projekcie wykorzystano część danych dotyczącą wina białego, obejmującą
+4898 obserwacji oraz 12 zmiennych – 11 fizykochemicznych i jedną
+wynikową quality, ocenianą w skali 0–10. Wszystkie zmienne objaśniające
+mają charakter ilościowy, dzięki czemu możliwe jest stosowanie metod
+opartych na macierzy korelacji, PCA oraz analizie klastrów. *Zmienne
+objaśniające* (wejściowe) odzwierciedlają parametry chemiczne uzyskane w
+testach laboratoryjnych, natomiast *zmienna objaśniana* (wyjściowa)
+opiera się na sensorycznej ocenie jakości. Na podstawie artykułu
+określono również, które zmienne objaśniające są *stymulantami*, a które
+*destymulantami*. Struktura danych przedstawiona została poniżej.
+
+*Zmienna objaśniana:*
+
+-   **jakość** (ocena 0-10)
+
+*Zmienne objaśniające:*
+
+-   **stała kwasowość**
+-   **lotna kwasowość**
+-   **kwas cytrynowy**
+-   **cukier resztkowy**
+-   **chlorki**
+-   **wolny dwutlenek siarki**
+-   **całkowity dwutlenek siarki**
+-   **gęstość**
+-   **pH**
+-   **siarczany**
+-   **alkohol**
+:::
+
+```{r wine, echo=FALSE, results='asis'}
 wina <- read.csv("winequality-white.csv", header=TRUE, sep=';')
-summary(wina)
-str(wina)
 
 # Nazwa zmiennej wynikowej
 target <- "quality"   # <-- zmień jeśli masz inną
@@ -82,7 +133,6 @@ metadata <- wina %>%
   )
 
 metadata
-
 ```
 
 ## Including Plots
