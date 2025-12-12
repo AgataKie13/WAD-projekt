@@ -18,6 +18,7 @@ library(dplyr)
 library(corrplot) 
 library(psych)  
 library(PerformanceAnalytics) 
+library(ggplot2)
 ```
 
 # 1. Wprowadzenie
@@ -162,10 +163,53 @@ metadata
 TRZEBABY TO JAKOŚ UŁADNIĆ, ALE CZAT NIE WSPÓŁPRACUJE - CHOĆ Z DRUGIEJ STRONY PANI NIGDZIE NIE PODAWAŁA INNYCH KODÓW
 
 ```{r}
-summary(wina)
+# PROPOZYCJA 1
+num_cols <- sapply(wina, is.numeric)
+vars <- names(wina)[num_cols]
+
+summary_tbl <- data.frame(
+  zmienna = vars,
+  min        = round(sapply(wina[vars], function(x) min(x, na.rm = TRUE)), 2),
+  max        = round(sapply(wina[vars], function(x) max(x, na.rm = TRUE)), 2),
+  średnia    = round(sapply(wina[vars], function(x) mean(x, na.rm = TRUE)), 2),
+  sd         = round(sapply(wina[vars], function(x) sd(x, na.rm = TRUE)), 2),
+  Q1         = round(sapply(wina[vars], function(x) quantile(x, 0.25, na.rm = TRUE)), 2),
+  mediana    = round(sapply(wina[vars], function(x) median(x, na.rm = TRUE)), 2),
+  Q3         = round(sapply(wina[vars], function(x) quantile(x, 0.75, na.rm = TRUE)), 2),
+  row.names = NULL
+)
+
+summary_tbl
+```
+
+
+```{r}
+# PROPOZYCJA 2
+library(kableExtra)
+
+num_cols <- sapply(wina, is.numeric)
+vars <- names(wina)[num_cols]
+
+summary_tbl <- data.frame(
+  zmienna    = vars,
+  min        = sapply(wina[vars], function(x) min(x, na.rm = TRUE)),
+  max        = sapply(wina[vars], function(x) max(x, na.rm = TRUE)),
+  średnia    = sapply(wina[vars], function(x) mean(x, na.rm = TRUE)),
+  sd         = sapply(wina[vars], function(x) sd(x, na.rm = TRUE)),
+  Q1         = sapply(wina[vars], function(x) quantile(x, 0.25, na.rm = TRUE)),
+  mediana    = sapply(wina[vars], function(x) median(x, na.rm = TRUE)),
+  Q3         = sapply(wina[vars], function(x) quantile(x, 0.75, na.rm = TRUE)),
+  liczba_NA  = sapply(wina[vars], function(x) sum(is.na(x))),
+  row.names  = NULL
+)
+
+summary_tbl %>%
+  kable("html", digits = 2, caption = "Statystyki opisowe wina") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = "striped")
 ```
 
 ## 2.2. Analiza rozkładów
+KOMENTARZ: dlaczego tylko rozkłady dwóch zmiennych?
 
 ```{r}
 par(mfrow = c(2, 2))
@@ -196,6 +240,39 @@ plot(density(wina$lotna_kwasowość),
 
 ```
 KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność, obecność ogonów itp.)
+
+```{r}
+# PROPOZYCJA DO ROZKŁADÓW WSZYSTKICH ZMIENNYCH
+library(tidyr)
+
+wina_long <- wina %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(everything(),
+               names_to = "zmienna",
+               values_to = "value")
+
+ggplot(wina_long, aes(x = value, fill = zmienna)) +
+  geom_histogram(
+    bins = 30,
+    color = "white"
+  ) +
+  facet_wrap(~zmienna, scales = "free", nrow = 3) +
+  labs(
+    x = "Wartość",
+    y = "Częstość"
+  ) +
+  scale_fill_brewer(palette = "Set3", guide = "none") +
+  theme_minimal(base_size = 10) +
+  theme(
+    strip.background = element_rect(fill = "#f7f7f7", color = NA),
+    strip.text = element_text(face = "bold", size = 9),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "#dddddd"),
+    plot.title = element_text(face = "bold", size = 12)
+  ) +
+  labs(title = "Rozkłady zmiennych danych o winie")
+```
+
 
 ## 2.3. Analiza korelacji
 
