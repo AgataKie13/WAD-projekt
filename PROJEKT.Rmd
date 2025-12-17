@@ -19,6 +19,7 @@ library(corrplot)
 library(psych)  
 library(PerformanceAnalytics) 
 library(ggplot2)
+library(tidyr)
 ```
 
 # 1. Wprowadzenie
@@ -150,7 +151,9 @@ metadata <- tibble(
   )
 )
 
-metadata
+metadata %>%
+  kable("html", digits = 2, caption = "Zmienne") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = "striped")
 
 ```
 
@@ -158,32 +161,7 @@ metadata
 
 ## 2.1. Podstawowe statystyki opisowe
 
-średnia, mediana, odchylenie standardowe, kwartyle
-
-TRZEBABY TO JAKOŚ UŁADNIĆ, ALE CZAT NIE WSPÓŁPRACUJE - CHOĆ Z DRUGIEJ STRONY PANI NIGDZIE NIE PODAWAŁA INNYCH KODÓW
-
-```{r}
-# PROPOZYCJA 1
-num_cols <- sapply(wina, is.numeric)
-vars <- names(wina)[num_cols]
-
-summary_tbl <- data.frame(
-  zmienna = vars,
-  min        = round(sapply(wina[vars], function(x) min(x, na.rm = TRUE)), 2),
-  max        = round(sapply(wina[vars], function(x) max(x, na.rm = TRUE)), 2),
-  średnia    = round(sapply(wina[vars], function(x) mean(x, na.rm = TRUE)), 2),
-  sd         = round(sapply(wina[vars], function(x) sd(x, na.rm = TRUE)), 2),
-  Q1         = round(sapply(wina[vars], function(x) quantile(x, 0.25, na.rm = TRUE)), 2),
-  mediana    = round(sapply(wina[vars], function(x) median(x, na.rm = TRUE)), 2),
-  Q3         = round(sapply(wina[vars], function(x) quantile(x, 0.75, na.rm = TRUE)), 2),
-  row.names = NULL
-)
-
-summary_tbl
-```
-
-
-```{r}
+```{r echo=FALSE}
 # PROPOZYCJA 2
 library(kableExtra)
 
@@ -199,7 +177,6 @@ summary_tbl <- data.frame(
   Q1         = sapply(wina[vars], function(x) quantile(x, 0.25, na.rm = TRUE)),
   mediana    = sapply(wina[vars], function(x) median(x, na.rm = TRUE)),
   Q3         = sapply(wina[vars], function(x) quantile(x, 0.75, na.rm = TRUE)),
-  liczba_NA  = sapply(wina[vars], function(x) sum(is.na(x))),
   row.names  = NULL
 )
 
@@ -209,42 +186,8 @@ summary_tbl %>%
 ```
 
 ## 2.2. Analiza rozkładów
-KOMENTARZ: dlaczego tylko rozkłady dwóch zmiennych?
 
-```{r}
-par(mfrow = c(2, 2))
-hist(wina$alkohol,
-     main = "Rozkład zmiennej alkohol",
-     xlab = "Wartości",
-     ylab = "Częstość",
-     col = "skyblue",
-     border = "black")
-
-plot(density(wina$alkohol),
-     main = "Wykres gęstości zmiennej alkohol",
-     xlab = "Alkohol",
-     ylab = "Gęstość")
-
-hist(wina$lotna_kwasowość,
-     main = "Rozkład zmiennej lotna kwasowość",
-     xlab = "Wartości",
-     ylab = "Częstość",
-     col = "skyblue",
-     border = "black")
-
-plot(density(wina$lotna_kwasowość),
-     main = "Wykres gęstości zmiennej
-     lotna kwasowość",
-     xlab = "Lotna kwasowość",
-     ylab = "Gęstość")
-
-```
-KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność, obecność ogonów itp.)
-
-```{r}
-# PROPOZYCJA DO ROZKŁADÓW WSZYSTKICH ZMIENNYCH
-library(tidyr)
-
+```{r echo=FALSE}
 wina_long <- wina %>%
   select(where(is.numeric)) %>%
   pivot_longer(everything(),
@@ -272,7 +215,9 @@ ggplot(wina_long, aes(x = value, fill = zmienna)) +
   ) +
   labs(title = "Rozkłady zmiennych danych o winie")
 ```
-
+::: {style="text-align: justify;"}
+KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność, obecność ogonów itp.)
+:::
 
 ## 2.3. Analiza korelacji
 
@@ -288,38 +233,105 @@ corrplot(macierz_korelacji,
          mar = c(0,0,1,0))
 ```
 ::: {style="text-align: justify;"}
-Z analizy macierzy korelacji można wywnioskować, że najsilniejsze zależności występują odpowiednio między
+Z analizy macierzy korelacji można wywnioskować, że najsilniejsze zależności występują odpowiednio między ...
+::::
 
 ```{r}
 
 # 2. TESTY ISTOTNOŚCI KORELACJI
 cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
-cat("\n2.1. Test istotności korelacji zmiennych jakość i alkohol:\n")
-cor_test_results1 <- cor.test(wina$jakość, wina$alkohol)
-cat("r =", round(cor_test_results1$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results1$p.value, 5), "\n")
-cat("\n2.2. Test istotności korelacji zmiennych jakość i lotna kwasowość:\n")
-cor_test_results2 <- cor.test(wina$alkohol, wina$lotna_kwasowość)
+cat("\n2.1. Test istotności korelacji zmiennych cukier resztkowy i gęstość:\n")
+cor_test_results2 <- cor.test(wina$cukier_resztkowy, wina$gęstość)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
-```
+cat("\n2.2. Test istotności korelacji zmiennych gęstość i alkohol:\n")
+cor_test_results2 <- cor.test(wina$gęstość, wina$alkohol)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
-```{r}
-# 3. Kompleksowa analiza korelacji z PerformanceAnalytics
-chart.Correlation(wina, histogram = TRUE, pch = 19)
+cat("\n2.3. Test istotności korelacji zmiennych wolny dwutlenek siarki i całkowity dwutlenek siarki:\n")
+cor_test_results2 <- cor.test(wina$wolny_dwutlenek_siarki, wina$całkowity_dwutlenek_siarki)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
+cat("\n2.4. Test istotności korelacji zmiennych całkowity dwutlenek siarki i gęstość:\n")
+cor_test_results2 <- cor.test(wina$całkowity_dwutlenek_siarki, wina$gęstość)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.5. Test istotności korelacji zmiennych stała kwasowość i pH:\n")
+cor_test_results2 <- cor.test(wina$stała_kwasowość, wina$pH)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.6. Test istotności korelacji zmiennych cukier resztkowy i alkohol:\n")
+cor_test_results2 <- cor.test(wina$cukier_resztkowy, wina$alkohol)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 ```
+::: {style="text-align: justify;"}
+krótkie wnioski
+::::
 
 ## 2.4. Analiza braków danych
 
 ```{r}
 print(colSums(is.na(wina)))
 ```
+::: {style="text-align: justify;"}
+Zbiór nie zawiera braków danych
+::::
 
 ## 2.5. Analiza obserwacji odstających
 
+::: {style="text-align: justify;"}
+Analiza rozkładów zmiennych pozwoliła zlokalizować zmienne, potencjalnie zawierające odchylenia. Wśród nich znajdują się takie zmienne jak: alkohol, chlorki, kwas cytrynowy, lotna kwasowość, pH, siarczany, stała kwasowość.
 
+```{r}
+boxplot((wina), main = "Analiza odchyleń")
+
+boxplot(wina$alkohol, 
+        names = c("alkohol"), main = "Alkohol")
+boxplot(wina$chlorki, 
+        names = c("chlorki"), main = "chlorki")
+boxplot(wina$kwas_cytrynowy, 
+        names = c("kwas_cytrynowy"), main = "kwas_cytrynowy")
+boxplot(wina$lotna_kwasowość, 
+        names = c("lotna_kwasowość"), main = "lotna_kwasowość")
+boxplot(wina$siarczany, 
+        names = c("siarczany"), main = "siarczany")
+
+
+```
+
+```{r}
+library(ggcorrplot)
+corr_matrix <- cor(danem)
+ggcorrplot(corr_matrix) + ggtitle("Macierz korelacji zmiennych po imputacji")
+
+x <- danem$ApplicantIncome
+y <- danem$CoapplicantIncome
+plot(x, y, xlab="Dochód wnioskodawcy", ylab="Dochód współwnioskodawcy", main="Zależność między dochodem wnioskodawcy a współwnioskodawcy")
+
+a <- danem$Credit_History
+b <- danem$ApplicantIncome
+plot(a, b, xlab="Historia kredytowa", ylab="Dochód wnioskodawcy", main="Zależność między historią kredytową a dochodem wnioskodawcy")
+
+a <- danem$Credit_History
+b <- danem$CoapplicantIncome
+plot(a, b, xlab="Historia kredytowa", ylab="Dochód współwnioskodawcy", main="Zależność między historią kredytową a dochodem współwnioskodawcy")
+
+a <- danem$Credit_History
+b <- danem$LoanAmount
+plot(a, b, xlab="Historia kredytowa", ylab="Kwota kredytu", main="Zależność między historią kredytową a kwotą kredytu")
+
+a <- danem$ApplicantIncome
+b <- danem$LoanAmount
+plot(a, b, xlab="Dochód wnioskodawcy", ylab="Kwota kredytu",  main="Zależność między dochodem wnioskodawcy a kwotą kredytu")
+```
+
+::::
 
 # 3. Obróbka zmiennych
 
