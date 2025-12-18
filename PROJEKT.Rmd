@@ -20,6 +20,7 @@ library(psych)
 library(ggplot2)
 library(tidyr)
 library(kableExtra)
+library(broom)
 ```
 
 # 1. Wprowadzenie
@@ -231,9 +232,9 @@ corrplot(macierz_korelacji,
 Z analizy macierzy korelacji można wywnioskować, że najsilniejsze zależności występują odpowiednio między ...
 ::::
 
-```{r}
+### 2.3.1. Testy istotności korelacji
 
-# 2. TESTY ISTOTNOŚCI KORELACJI
+```{r}
 cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
 cat("\n2.1. Test istotności korelacji zmiennych cukier resztkowy i gęstość:\n")
 cor_test_results2 <- cor.test(wina$cukier_resztkowy, wina$gęstość)
@@ -323,7 +324,6 @@ Następnie przeprowadzono wielowymiarową analizę odchyleń z wykorzystaniem re
 ::::
 
 ```{r}
-library(broom)
 layout(matrix(c(1, 2), nrow = TRUE, byrow = 2), heights = c(1, 1, 1))
 fit1 = lm(jakość ~ całkowity_dwutlenek_siarki,data=wina)
 plot(fit1,which=4, main="Jakość vs całkowity\ndwutlenek siarki")
@@ -365,6 +365,13 @@ Punkty znajdujące się blisko OX mają niewielki wpływ na na model, dzięki cz
 # 3. Obróbka zmiennych
 
 ## 3.1. Obsługa obserwacji odstających - jeśli występują
+
+!na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
+
+```{r}
+
+
+```
 
 ## 3.2. Tworzenie nowych zmiennych
 
