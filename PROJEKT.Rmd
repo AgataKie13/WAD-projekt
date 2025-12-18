@@ -17,9 +17,9 @@ library(skimr)
 library(dplyr)
 library(corrplot) 
 library(psych)  
-library(PerformanceAnalytics) 
 library(ggplot2)
 library(tidyr)
+library(kableExtra)
 ```
 
 # 1. Wprowadzenie
@@ -139,8 +139,6 @@ wina <- wina %>%
 stymulanty <- c("kwas_cytrynowy", "pH", "siarczany", "alkohol")
 destymulanty <- c("stała_kwasowość", "lotna_kwasowość", "cukier_resztkowy", "chlorki", "wolny_dwutlenek_siarki", "całkowity_dwutlenek_siarki", "gęstość")
 
-target <- "quality"
-
 metadata <- tibble(
   zmienna = names(wina),
   typ_danych = sapply(wina, class),
@@ -162,9 +160,6 @@ metadata %>%
 ## 2.1. Podstawowe statystyki opisowe
 
 ```{r echo=FALSE}
-# PROPOZYCJA 2
-library(kableExtra)
-
 num_cols <- sapply(wina, is.numeric)
 vars <- names(wina)[num_cols]
 
@@ -285,52 +280,86 @@ Zbiór nie zawiera braków danych
 
 ## 2.5. Analiza obserwacji odstających
 
+```{r}
+wina_long <- wina %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "zmienna",
+    values_to = "value"
+  )
+
+ggplot(wina_long, aes(y = value)) +
+  geom_boxplot(
+    fill = "#8DA0CB",
+    color = "#4A4A4A",
+    outlier.color = "#D95F02",
+    outlier.alpha = 0.6
+  ) +
+  facet_wrap(
+    ~ zmienna,
+    scales = "free_y",
+    nrow = 3
+  ) +
+  labs(
+    x = NULL,
+    y = "Wartość",
+    title = "Analiza wartości odstających"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    strip.background = element_rect(fill = "#f7f7f7", color = NA),
+    strip.text = element_text(face = "bold", size = 9),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold", size = 12)
+  )
+
+
+```
 ::: {style="text-align: justify;"}
-Analiza rozkładów zmiennych pozwoliła zlokalizować zmienne, potencjalnie zawierające odchylenia. Wśród nich znajdują się takie zmienne jak: alkohol, chlorki, kwas cytrynowy, lotna kwasowość, pH, siarczany, stała kwasowość.
+Analiza rozkładów zmiennych oraz wstępna analiza odchyleń z wykorzystaniem boxplotów pozwoliła zlokalizować zmienne zawierające odchylenia. Wśród nich znajdują się wszystkie zmienne z wyjątkiem zmiennej alkohol.\
+Następnie przeprowadzono wielowymiarową analizę odchyleń z wykorzystaniem relacji między zmienną objaśnianą - jakość a zmiennymi objaśniającymi.
+::::
 
 ```{r}
-boxplot((wina), main = "Analiza odchyleń")
+library(broom)
+layout(matrix(c(1, 2), nrow = TRUE, byrow = 2), heights = c(1, 1, 1))
+fit1 = lm(jakość ~ całkowity_dwutlenek_siarki,data=wina)
+plot(fit1,which=4, main="Jakość vs całkowity\ndwutlenek siarki")
 
-boxplot(wina$alkohol, 
-        names = c("alkohol"), main = "Alkohol")
-boxplot(wina$chlorki, 
-        names = c("chlorki"), main = "chlorki")
-boxplot(wina$kwas_cytrynowy, 
-        names = c("kwas_cytrynowy"), main = "kwas_cytrynowy")
-boxplot(wina$lotna_kwasowość, 
-        names = c("lotna_kwasowość"), main = "lotna_kwasowość")
-boxplot(wina$siarczany, 
-        names = c("siarczany"), main = "siarczany")
+fit2 = lm(jakość ~ wolny_dwutlenek_siarki,data=wina)
+plot(fit2,which=4, main="Jakość vs wolny\ndwutlenek siarki")
 
+fit3 = lm(jakość ~ lotna_kwasowość,data=wina)
+plot(fit3,which=4, main="Jakość vs lotna kwasowość")
+
+fit4 = lm(jakość ~ stała_kwasowość,data=wina)
+plot(fit4,which=4, main="Jakość vs stała kwasowość")
+
+fit5 = lm(jakość ~ chlorki,data=wina)
+plot(fit5,which=4, main="Jakość vs chlorki")
+
+fit6 = lm(jakość ~ cukier_resztkowy,data=wina)
+plot(fit6,which=4, main="Jakość vs cukier resztkowy")
+
+fit7 = lm(jakość ~ gęstość,data=wina)
+plot(fit7,which=4, main="Jakość vs gęstość")
+
+fit8 = lm(jakość ~ kwas_cytrynowy,data=wina)
+plot(fit8,which=4, main="Jakość vs kwas cytrynowy")
+
+fit9 = lm(jakość ~ pH,data=wina)
+plot(fit9,which=4, main="Jakość vs pH")
+
+fit10 = lm(jakość ~ siarczany,data=wina)
+plot(fit10,which=4, main="Jakość vs siarczany")
 
 ```
-
-```{r}
-library(ggcorrplot)
-corr_matrix <- cor(danem)
-ggcorrplot(corr_matrix) + ggtitle("Macierz korelacji zmiennych po imputacji")
-
-x <- danem$ApplicantIncome
-y <- danem$CoapplicantIncome
-plot(x, y, xlab="Dochód wnioskodawcy", ylab="Dochód współwnioskodawcy", main="Zależność między dochodem wnioskodawcy a współwnioskodawcy")
-
-a <- danem$Credit_History
-b <- danem$ApplicantIncome
-plot(a, b, xlab="Historia kredytowa", ylab="Dochód wnioskodawcy", main="Zależność między historią kredytową a dochodem wnioskodawcy")
-
-a <- danem$Credit_History
-b <- danem$CoapplicantIncome
-plot(a, b, xlab="Historia kredytowa", ylab="Dochód współwnioskodawcy", main="Zależność między historią kredytową a dochodem współwnioskodawcy")
-
-a <- danem$Credit_History
-b <- danem$LoanAmount
-plot(a, b, xlab="Historia kredytowa", ylab="Kwota kredytu", main="Zależność między historią kredytową a kwotą kredytu")
-
-a <- danem$ApplicantIncome
-b <- danem$LoanAmount
-plot(a, b, xlab="Dochód wnioskodawcy", ylab="Kwota kredytu",  main="Zależność między dochodem wnioskodawcy a kwotą kredytu")
-```
-
+[z innego projektu
+Dystans Cooka mierzy wpływ pojedynczej obserwacji na dopasowanie modelu. Na osi Y przedstawiane są wartości Cook's Distance, a na osi X liczba obserwacji.\
+Dla wykresu **Kwota kredytu vs Dochód wnioskodawcy** Dystans Cooka jest większy od 1, co oznacza, że taki punkt może być uznawany za odstający. W pozostałych pryzpadkach wartości wskaźnika są mniejsze od 1.\
+Punkty znajdujące się blisko OX mają niewielki wpływ na na model, dzięki czemu można uznać je za normalne. Na każdym wykresie znajduje się kilka istotnie wykraczających wartości, które pozostały po przeprowadzonej walidacji i analizie braków danych.]
 ::::
 
 # 3. Obróbka zmiennych
