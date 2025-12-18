@@ -356,10 +356,11 @@ fit10 = lm(jakość ~ siarczany,data=wina)
 plot(fit10,which=4, main="Jakość vs siarczany")
 
 ```
-[z innego projektu
-Dystans Cooka mierzy wpływ pojedynczej obserwacji na dopasowanie modelu. Na osi Y przedstawiane są wartości Cook's Distance, a na osi X liczba obserwacji.\
-Dla wykresu **Kwota kredytu vs Dochód wnioskodawcy** Dystans Cooka jest większy od 1, co oznacza, że taki punkt może być uznawany za odstający. W pozostałych pryzpadkach wartości wskaźnika są mniejsze od 1.\
-Punkty znajdujące się blisko OX mają niewielki wpływ na na model, dzięki czemu można uznać je za normalne. Na każdym wykresie znajduje się kilka istotnie wykraczających wartości, które pozostały po przeprowadzonej walidacji i analizie braków danych.]
+::: {style="text-align: justify;"}
+[z czata:]
+Analizę obserwacji odstających przeprowadzono z wykorzystaniem wykresów pudełkowych oraz miar wpływu (Cook’s distance). Stwierdzono obecność wartości odstających w rozkładach zmiennych chemicznych, co jest zjawiskiem typowym dla danych tego rodzaju i nie wskazuje na błędy pomiarowe.
+
+Na podstawie analizy miar wpływu nie stwierdzono konieczności usuwania obserwacji, gdyż pojedyncze punkty o podwyższonej wartości Cook’s distance nie miały dominującego wpływu na estymację modelu.
 ::::
 
 # 3. Obróbka zmiennych
@@ -369,9 +370,22 @@ Punkty znajdujące się blisko OX mają niewielki wpływ na na model, dzięki cz
 !na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
 
 ```{r}
+winsorize_iqr <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  pmin(pmax(x, Q1 - 1.5 * IQR), Q3 + 1.5 * IQR)
+}
 
+wina_clean <- wina
+num_vars <- setdiff(names(wina)[sapply(wina, is.numeric)], "jakosc")
+
+wina_clean[num_vars] <- lapply(wina_clean[num_vars], winsorize_iqr)
 
 ```
+::: {style="text-align: justify;"}
+Zmienną objaśnianą (jakość wina) pozostawiono bez modyfikacji ze względu na jej kluczowe znaczenie dla problemu badawczego. Dla zmiennych objaśniających zastosowano wyrównanie wartości odstających do progów wyznaczonych na podstawie reguły 1,5·IQR (winsoryzacja), co pozwoliło ograniczyć wpływ obserwacji ekstremalnych bez usuwania danych.
+::::
 
 ## 3.2. Tworzenie nowych zmiennych
 
