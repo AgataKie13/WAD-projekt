@@ -1,0 +1,601 @@
+---
+title: "Wielowymiarowa analiza jakości wina na podstawie danych ..."
+author: "Agata Kierznikowicz, Zuzanna Łomża"
+date: "2025-12-05"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Biblioteki:
+library(readr)
+library(skimr)
+library(dplyr)
+library(corrplot) 
+library(psych)  
+library(ggplot2)
+library(tidyr)
+library(kableExtra)
+library(broom)
+```
+
+# 1. Wprowadzenie
+
+## 1.1. Motywacja i cel pracy
+
+::: {style="text-align: justify;"}
+Rezerwacje hotelowe są integralną częścią branży turystycznej i
+hotelarskiej, która dynamicznie się rozwija i w której decyzje biznesowe
+w dużej mierze opierają się na danych. Każdego dnia hotele przyjmują
+setki, a nawet tysiące gości, a systemy rezerwacyjne gromadzą
+szczegółowe informacje o czasie dokonania rezerwacji, liczbie osób,
+długości pobytu, typie hotelu czy dodatkowych usługach. Choć dane te są
+dostępne, rzadko analizuje się je kompleksowo, aby zrozumieć wzorce
+zachowań klientów i czynniki wpływające na anulowanie rezerwacji.
+
+Zbiór danych o rezerwacjach hotelowych zawiera wiele powiązanych ze sobą
+zmiennych, takich jak typ hotelu, czas oczekiwania na przyjazd, liczba
+dorosłych i dzieci, sezonowość, liczba wcześniejszych anulacji czy
+liczba specjalnych próśb. Ponieważ cech jest wiele i mogą one wpływać na
+siebie nawzajem, trudno jest je analizować pojedynczo. Dlatego w
+projekcie zastosowano metody wielowymiarowej analizy danych, które
+pozwalają zidentyfikować najważniejsze zależności i wzorce w zbiorze
+danych.
+
+Celem projektu jest lepsze zrozumienie zachowań klientów hotelowych,
+identyfikacja czynników wpływających na anulowanie rezerwacji oraz
+wykrycie naturalnych grup rezerwacji, które różnią się między sobą pod
+względem charakterystyki gości i wzorców pobytu. W tym celu wykorzystano
+m.in. analizę głównych składowych (PCA), metody klasteryzacji oraz inne
+techniki eksploracyjne, które pomagają uporządkować dane i wydobyć
+najważniejsze informacje.
+
+**Główne cele projektu to:**
+
+-   zbadanie zależności między różnymi cechami rezerwacji hotelowych,
+-   identyfikacja zmiennych, które najbardziej wpływają na anulowanie
+    rezerwacji,
+-   zastosowanie PCA do redukcji wymiarowości i interpretacji
+    składowych,
+-   wykrycie naturalnych grup rezerwacji przy użyciu metod analizy
+    skupień (klastrów),
+-   ocena przydatności zastosowanych metod w analizie danych hotelowych
+    i podejmowaniu decyzji biznesowych.
+:::
+
+## 1.2. Opis problemu badawczego
+
+::: {style="text-align: justify;"}
+Powyżej przedstawiono ogólny kontekst problemu związanego z rezerwacjami
+hotelowymi. Zbiór danych zawiera wiele zmiennych opisujących rezerwacje
+– zarówno cechy gości, jak i szczegóły dotyczące pobytu czy anulowania
+rezerwacji. Ich wzajemne powiązania są złożone i trudne do analizy bez
+zastosowania odpowiednich metod statystycznych i eksploracyjnych.
+
+W związku z tym w projekcie należy odpowiedzieć na kilka kluczowych
+pytań badawczych:
+
+-   Które cechy rezerwacji (np. czas oczekiwania na przyjazd, liczba
+    osób, typ hotelu) są ze sobą najsilniej powiązane?
+-   Które zmienne mają największy wpływ na anulowanie rezerwacji?
+-   Czy można zidentyfikować naturalne grupy rezerwacji, np. według
+    charakterystyki gości, typu hotelu lub wzorców pobytu?
+-   Czy zastosowanie metod redukcji wymiarowości (np. PCA) pozwala
+    lepiej zrozumieć strukturę danych i ułatwia interpretację powiązań
+    między zmiennymi?
+:::
+
+## 1.3. Opis danych
+
+::: {style="text-align: justify;"}
+Dane wykorzystane w projekcie pochodzą z publicznego repozytorium Kaggle
+i są dostępne pod adresem
+<https://www.kaggle.com/datasets/mojtaba142/hotel-booking>. Zbiór
+obejmuje rezerwacje dokonane w dwóch typach hoteli – city hotel i resort
+hotel – w okresie od lipca 2015 do sierpnia 2017. Dane są kompletne,
+liczne i dobrze przystosowane do analiz wielowymiarowych.
+
+Jako **zmienną objaśnianą** przyjęto zmienną *is_canceled*, która
+wskazuje, czy rezerwacja została anulowana. Pozostałe zmienne ilościowe
+i kategoryczne podzielono na grupy w zależności od ich potencjalnego
+wpływu na ryzyko anulowania rezerwacji, co pozwala badać zarówno
+czynniki stymulujące, jak i hamujące rezerwacje.
+
+**Struktura zbioru:**
+
+-   liczba obserwacji: 119 390
+-   liczba zmiennych: 32
+
+***Zmienna objaśniana:***
+
+-   *is_canceled*
+
+***Zmienne objaśniające:***
+
+*Stymulanty* - ich wzrost zmniejsza prawdopodobieństwo anulowania
+pobytu:
+
+1.  previous_bookings_not_canceled → lojalność klienta,,
+2.  is_repeated_guest → lojalność klienta,
+3.  total_of_special_requests → większe zaangażowanie klienta,
+4.  stays_in_weekend_nights → dłuższy pobyt → mniejsza szansa
+    anulowania,
+5.  stays_in_week_nights → dłuższy pobyt → mniejsza szansa anulowania,
+6.  adults → rezerwacje rodzinne są stabilniejsze,
+7.  children → rezerwacje rodzinne są stabilniejsze,
+8.  babies → rezerwacje rodzinne są stabilniejsze,
+9.  required_car_parking_spaces → klient raczej planuje przyjazd.
+
+*Destymulanty* - ich wzrost zwiększa ryzyko anulowania:
+
+10. lead_time → im wcześniej rezerwacja, tym większa szansa anulowania,
+11. previous_cancellations → historia anulowań,
+12. booking_changes → niestabilność rezerwacji,
+13. days_in_waiting_list → niepewność dostępności,
+14. adr (średnia cena za noc) → droższe rezerwacje częściej anulowane.
+
+*Nominanty* - świetnie nadają się do kodowania, mogą wejść do PCA (po
+kodowaniu) lub klasteryzacji
+
+15. arrival_date_month,
+16. arrival_date_week_number,
+17. hotel (City / Resort),
+18. market_segment,
+19. distribution_channel,
+20. meal,
+21. country,
+22. reserved_room_type,
+23. assigned_room_type,
+24. deposit_type,
+25. customer_type.
+
+*Pozostałe zmienne* i ich zastosowanie analityczne w projekcie
+
+-   **arrival_date_year**, **arrival_date_day_of_month** → zmienne
+    czasowe, które można jedynie wykorzystać do analizy kontekstowej
+    oraz tworzenia nowych cech;
+
+-   **reservation_status**, **reservation_status_date** → zmienne
+    opisujące status rezerwacji są bezpośrednio powiazane ze zmienną
+    objaśniającą *(!trzeba zrobić macierz korelacji!)*; zostały
+    wykluczone z modelowania, aby uniknąć wycieku informacji (data
+    leakage);
+
+-   **agent**, **company**, **name**, **email**, **phone.number**,
+    **credit_card** → zmienne identyfikujące o braku interpretacji
+    ekonomicznej i istotności analitycznej, zawierają bardzo dużo
+    kategorii, przez co mogą zdominować PCA; zostały wykluczone z
+    modelowania, ale zostają do opisu danych.
+:::
+
+```{r wine, echo=FALSE, results='asis'}
+hotel <- read.csv("hotel_booking.csv", header=TRUE, sep=',')
+
+hotel <- hotel %>%
+  rename(
+  "odwołanie_rezerwacji" = "is_canceled",
+  "wcześniejsze_rezerwacje_nieodwołane" = "previous_bookings_not_canceled",
+  "powracający_gość" = "is_repeated_guest",
+  "liczba_specjalnych_prośb" = "total_of_special_requests",
+  "liczba_nocy_weekendowych" = "stays_in_weekend_nights",
+  "liczba_nocy_tygodniowych" = "stays_in_week_nights",
+  "liczba_dorosłych" = "adults",
+  "liczba_dzieci" = "children",
+  "liczba_niemowląt" = "babies",
+  "wymagane_miejsca_parkingowe" = "required_car_parking_spaces",
+  "czas_wyprzedzenia_rezerwacji" = "lead_time",
+  "wcześniejsze_odwołania" = "previous_cancellations",
+  "liczba_zmian_rezerwacji" = "booking_changes",
+  "liczba_dni_na_liście_oczekujących" = "days_in_waiting_list",
+  "średnia_cena_za_noc" = "adr",
+  "miesiąc_przyjazdu" = "arrival_date_month",
+  "numer_tygodnia_przyjazdu" = "arrival_date_week_number",
+  "typ_hotelu" = "hotel",
+  "segment_rynku" = "market_segment",
+  "kanał_dystrybucji" = "distribution_channel",
+  "rodzaj_wyżywienia" = "meal",
+  "kraj_pochodzenia" = "country",
+  "rodzaj_zarezerwowanego_pokoju" = "reserved_room_type",
+  "rodzaj_przydzielonego_pokoju" = "assigned_room_type",
+  "rodzaj_depozytu" = "deposit_type",
+  "typ_klienta" = "customer_type",
+  "rok_przyjazdu" = "arrival_date_year",
+  "dzień_przyjazdu_w_miesiącu" = "arrival_date_day_of_month",
+  "status_rezerwacji" = "reservation_status",
+  "data_statusu_rezerwacji" = "reservation_status_date",
+  "agent_rezerwacji" = "agent",
+  "firma" = "company",
+  "imię_i_nazwisko" = "name",
+  "adres_email" = "email",
+  "numer_telefonu" = "phone.number",
+  "numer_karty_kredytowej" = "credit_card"
+)
+
+stymulanty <- c(
+  "wcześniejsze_rezerwacje_nieodwołane",
+  "powracający_gość",
+  "liczba_specjalnych_prośb",
+  "liczba_nocy_weekendowych",
+  "liczba_nocy_tygodniowych",
+  "liczba_dorosłych",
+  "liczba_dzieci",
+  "liczba_niemowląt",
+  "wymagane_miejsca_parkingowe"
+)
+destymulanty <- c(
+  "czas_wyprzedzenia_rezerwacji",
+  "wcześniejsze_odwołania",
+  "liczba_zmian_rezerwacji",
+  "liczba_dni_na_liście_oczekujących",
+  "średnia_cena_za_noc"
+)
+nominanty <- c(
+  "miesiąc_przyjazdu",
+  "numer_tygodnia_przyjazdu",
+  "typ_hotelu",
+  "segment_rynku",
+  "kanał_dystrybucji",
+  "rodzaj_wyżywienia",
+  "kraj_pochodzenia",
+  "rodzaj_zarezerwowanego_pokoju",
+  "rodzaj_przydzielonego_pokoju",
+  "rodzaj_depozytu",
+  "typ_klienta"
+)
+inne <- c(
+  "rok_przyjazdu",
+  "dzień_przyjazdu_w_miesiącu",
+  "status_rezerwacji",
+  "data_statusu_rezerwacji",
+  "agent_rezerwacji",
+  "firma",
+  "imię_i_nazwisko",
+  "adres_email",
+  "numer_telefonu",
+  "numer_karty_kredytowej"
+)
+
+metadata <- tibble(
+  zmienna = names(hotel),
+  typ_danych = sapply(hotel, class),
+  stymulanta_destymulanta = case_when(
+    names(hotel) %in% stymulanty ~ "stymulanta",
+    names(hotel) %in% destymulanty ~ "destymulanta",
+    names(hotel) %in% nominanty ~ "nominanta",
+    names(hotel) %in% inne ~ "inne",
+    TRUE ~ "zmienna objaśniana"
+  )
+) %>%
+  mutate(kolejnosc = case_when(
+    stymulanta_destymulanta == "zmienna objaśniana" ~ 1,
+    stymulanta_destymulanta == "stymulanta" ~ 2,
+    stymulanta_destymulanta == "destymulanta" ~ 3,
+    stymulanta_destymulanta == "nominanta" ~ 4,
+    TRUE ~ 5
+  )) %>%
+  arrange(kolejnosc, zmienna) %>%
+  select(-kolejnosc)
+
+metadata %>%
+  kable("html", digits = 2, caption = "Zmienne") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+```
+
+```{r}
+is_binary <- function(x) {
+  is.numeric(x) && all(na.omit(x) %in% c(0,1))
+}
+
+binarne <- names(hotel)[sapply(hotel, is_binary)]
+
+binarne
+str(hotel)
+
+str(hotel$wcześniejsze_odwołania)
+str(hotel$wcześniejsze_rezerwacje_nieodwołane)
+str(hotel$wymagane_miejsca_parkingowe)
+str(hotel$liczba_specjalnych_prośb)
+
+```
+
+# 2. Analiza eksploracyjna danych
+
+## 2.1. Podstawowe statystyki opisowe
+
+```{r echo=FALSE}
+zmienne_do_analizy <- c(
+  stymulanty,
+  destymulanty,
+  nominanty
+)
+num_cols <- sapply(hotel, is.numeric) & !(names(hotel) %in% binarne)
+vars <- names(hotel)[num_cols]
+
+summary_tbl <- data.frame(
+  zmienna    = vars,
+  min        = sapply(hotel[vars], function(x) min(x, na.rm = TRUE)),
+  max        = sapply(hotel[vars], function(x) max(x, na.rm = TRUE)),
+  średnia    = sapply(hotel[vars], function(x) mean(x, na.rm = TRUE)),
+  sd         = sapply(hotel[vars], function(x) sd(x, na.rm = TRUE)),
+  Q1         = sapply(hotel[vars], function(x) quantile(x, 0.25, na.rm = TRUE)),
+  mediana    = sapply(hotel[vars], function(x) median(x, na.rm = TRUE)),
+  Q3         = sapply(hotel[vars], function(x) quantile(x, 0.75, na.rm = TRUE)),
+  row.names  = NULL
+)
+
+summary_tbl %>%
+  kable("html", digits = 2, caption = "Statystyki opisowe wina") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+```
+
+## 2.2. Analiza rozkładów
+
+*Tylko dla zmiennych numerycznych*
+
+```{r}
+hotel_long <- hotel %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(
+    everything(),
+    names_to = "zmienna",
+    values_to = "value"
+  ) %>%
+  filter(is.finite(value))
+
+ggplot(hotel_long, aes(x = value, fill = zmienna)) +
+  geom_histogram(
+    bins = 30,
+    color = "white"
+  ) +
+  facet_wrap(~zmienna, scales = "free", nrow = 5) +
+  labs(
+    x = "Wartość",
+    y = "Częstość",
+    title = "Rozkłady zmiennych"
+  ) +
+  scale_fill_viridis_d(guide = "none") +
+  theme_minimal(base_size = 10) +
+  theme(
+    strip.background = element_rect(fill = "#f7f7f7", color = NA),
+    strip.text = element_text(face = "bold", size = 9),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "#dddddd"),
+    plot.title = element_text(face = "bold", size = 12)
+  )
+```
+
+zmienne nie mające sensu: rok_przyjazdu, ::: {style="text-align:
+justify;"} KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność,
+obecność ogonów itp.) :::
+
+## 2.3. Analiza korelacji
+
+```{r}
+# 1. MACIERZ KORELACJI PEARSONA
+macierz_korelacji <- cor(wina, method = "pearson")
+
+# 1.2. WIZUALIZACJA MACIERZY KORELACJI
+corrplot(macierz_korelacji, 
+         method = "circle", 
+         type = "upper",
+         title = "Macierz korelacji - metoda kółek",
+         mar = c(0,0,1,0))
+```
+
+::: {style="text-align: justify;"}
+Z analizy macierzy korelacji można wywnioskować, że najsilniejsze
+zależności występują odpowiednio między ...
+:::
+
+### 2.3.1. Testy istotności korelacji
+
+```{r}
+cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
+cat("\n2.1. Test istotności korelacji zmiennych cukier resztkowy i gęstość:\n")
+cor_test_results2 <- cor.test(wina$cukier_resztkowy, wina$gęstość)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.2. Test istotności korelacji zmiennych gęstość i alkohol:\n")
+cor_test_results2 <- cor.test(wina$gęstość, wina$alkohol)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.3. Test istotności korelacji zmiennych wolny dwutlenek siarki i całkowity dwutlenek siarki:\n")
+cor_test_results2 <- cor.test(wina$wolny_dwutlenek_siarki, wina$całkowity_dwutlenek_siarki)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.4. Test istotności korelacji zmiennych całkowity dwutlenek siarki i gęstość:\n")
+cor_test_results2 <- cor.test(wina$całkowity_dwutlenek_siarki, wina$gęstość)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.5. Test istotności korelacji zmiennych stała kwasowość i pH:\n")
+cor_test_results2 <- cor.test(wina$stała_kwasowość, wina$pH)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.6. Test istotności korelacji zmiennych cukier resztkowy i alkohol:\n")
+cor_test_results2 <- cor.test(wina$cukier_resztkowy, wina$alkohol)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+```
+
+::: {style="text-align: justify;"}
+krótkie wnioski
+:::
+
+## 2.4. Analiza braków danych
+
+```{r}
+print(colSums(is.na(wina)))
+```
+
+::: {style="text-align: justify;"}
+Zbiór nie zawiera braków danych
+:::
+
+## 2.5. Analiza obserwacji odstających
+
+```{r}
+wina_long <- wina %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "zmienna",
+    values_to = "value"
+  )
+
+ggplot(wina_long, aes(y = value)) +
+  geom_boxplot(
+    fill = "#8DA0CB",
+    color = "#4A4A4A",
+    outlier.color = "#D95F02",
+    outlier.alpha = 0.6
+  ) +
+  facet_wrap(
+    ~ zmienna,
+    scales = "free_y",
+    nrow = 3
+  ) +
+  labs(
+    x = NULL,
+    y = "Wartość",
+    title = "Analiza wartości odstających"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    strip.background = element_rect(fill = "#f7f7f7", color = NA),
+    strip.text = element_text(face = "bold", size = 9),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    plot.title = element_text(face = "bold", size = 12)
+  )
+
+
+```
+
+::: {style="text-align: justify;"}
+Analiza rozkładów zmiennych oraz wstępna analiza odchyleń z
+wykorzystaniem boxplotów pozwoliła zlokalizować zmienne zawierające
+odchylenia. Wśród nich znajdują się wszystkie zmienne z wyjątkiem
+zmiennej alkohol.\
+Następnie przeprowadzono wielowymiarową analizę odchyleń z
+wykorzystaniem relacji między zmienną objaśnianą - jakość a zmiennymi
+objaśniającymi.
+:::
+
+```{r}
+layout(matrix(c(1, 2), nrow = TRUE, byrow = 2), heights = c(1, 1, 1))
+fit1 = lm(jakość ~ całkowity_dwutlenek_siarki,data=wina)
+plot(fit1,which=4, main="Jakość vs całkowity\ndwutlenek siarki")
+
+fit2 = lm(jakość ~ wolny_dwutlenek_siarki,data=wina)
+plot(fit2,which=4, main="Jakość vs wolny\ndwutlenek siarki")
+
+fit3 = lm(jakość ~ lotna_kwasowość,data=wina)
+plot(fit3,which=4, main="Jakość vs lotna kwasowość")
+
+fit4 = lm(jakość ~ stała_kwasowość,data=wina)
+plot(fit4,which=4, main="Jakość vs stała kwasowość")
+
+fit5 = lm(jakość ~ chlorki,data=wina)
+plot(fit5,which=4, main="Jakość vs chlorki")
+
+fit6 = lm(jakość ~ cukier_resztkowy,data=wina)
+plot(fit6,which=4, main="Jakość vs cukier resztkowy")
+
+fit7 = lm(jakość ~ gęstość,data=wina)
+plot(fit7,which=4, main="Jakość vs gęstość")
+
+fit8 = lm(jakość ~ kwas_cytrynowy,data=wina)
+plot(fit8,which=4, main="Jakość vs kwas cytrynowy")
+
+fit9 = lm(jakość ~ pH,data=wina)
+plot(fit9,which=4, main="Jakość vs pH")
+
+fit10 = lm(jakość ~ siarczany,data=wina)
+plot(fit10,which=4, main="Jakość vs siarczany")
+
+```
+
+::: {style="text-align: justify;"}
+[z czata:] Analizę obserwacji odstających przeprowadzono z
+wykorzystaniem wykresów pudełkowych oraz miar wpływu (Cook’s distance).
+Stwierdzono obecność wartości odstających w rozkładach zmiennych
+chemicznych, co jest zjawiskiem typowym dla danych tego rodzaju i nie
+wskazuje na błędy pomiarowe.
+
+Na podstawie analizy miar wpływu nie stwierdzono konieczności usuwania
+obserwacji, gdyż pojedyncze punkty o podwyższonej wartości Cook’s
+distance nie miały dominującego wpływu na estymację modelu.
+:::
+
+# 3. Obróbka zmiennych
+
+## 3.1. Obsługa obserwacji odstających - jeśli występują
+
+!na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
+
+```{r}
+winsorize_iqr <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR <- Q3 - Q1
+  pmin(pmax(x, Q1 - 1.5 * IQR), Q3 + 1.5 * IQR)
+}
+
+wina_clean <- wina
+num_vars <- setdiff(names(wina)[sapply(wina, is.numeric)], "jakosc")
+
+wina_clean[num_vars] <- lapply(wina_clean[num_vars], winsorize_iqr)
+
+```
+
+::: {style="text-align: justify;"}
+Zmienną objaśnianą (jakość wina) pozostawiono bez modyfikacji ze względu
+na jej kluczowe znaczenie dla problemu badawczego. Dla zmiennych
+objaśniających zastosowano wyrównanie wartości odstających do progów
+wyznaczonych na podstawie reguły 1,5·IQR (winsoryzacja), co pozwoliło
+ograniczyć wpływ obserwacji ekstremalnych bez usuwania danych.
+:::
+
+## 3.2. Tworzenie nowych zmiennych
+
+**Można dodać zmienną pochodną: room_changed = reserved_room_type !=
+assigned_room_type**
+
+## 3.3. Standaryzacja i normalizacja
+
+# 4. ZASTOSOWANIE METOD WIELOWYMIAROWYCH
+
+## 4.1. PCA – Analiza głównych składowych
+
+PCA umożliwia redukcję wymiarowości oraz ocenę, które zmienne wyjaśniają
+największą część wariancji. Zostaną przedstawione wartości własne,
+wykres osypiska oraz biplot.
+
+Jeśli stosowano metody redukcji wymiaru (np. PCA), opisz:
+
+• jakie dane weszły do analizy,
+
+• ile składowych wybrano i dlaczego,
+
+• jaka część wariancji została wyjaśniona.
+
+## 4.2 Analiza skupień
+
+Zostaną zastosowane metody k-średnich oraz hierarchiczna metoda Warda.
+Wyniki obejmą dendrogram, wykresy skupień oraz interpretację klastrów
+względem zmiennych chemicznych.
+
+# 5. PORÓWNANIE METOD I WIZUALIZACJE
+
+Porównane zostaną wyniki PCA i klasteryzacji, a także ich interpretacje.
+Wizualizacje obejmą m.in. biploty, wykresy skupień oraz wykresy 2D/3D
+(każdy wykres powinien mieć opis i krótki komentarz)
