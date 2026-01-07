@@ -183,7 +183,7 @@ hotel <- hotel %>%
   "odwołanie_rezerwacji" = "is_canceled",
   "wcześniejsze_rezerwacje_nieodwołane" = "previous_bookings_not_canceled",
   "powracający_gość" = "is_repeated_guest",
-  "liczba_specjalnych_prośb" = "total_of_special_requests",
+  "liczba_specjalnych_próśb" = "total_of_special_requests",
   "liczba_nocy_weekendowych" = "stays_in_weekend_nights",
   "liczba_nocy_tygodniowych" = "stays_in_week_nights",
   "liczba_dorosłych" = "adults",
@@ -222,7 +222,7 @@ hotel <- hotel %>%
 stymulanty <- c(
   "wcześniejsze_rezerwacje_nieodwołane",
   "powracający_gość",
-  "liczba_specjalnych_prośb",
+  "liczba_specjalnych_próśb",
   "liczba_nocy_weekendowych",
   "liczba_nocy_tygodniowych",
   "liczba_dorosłych",
@@ -298,8 +298,7 @@ is_binary <- function(x) {
 
 binarne <- sapply(hotel, is_binary)
 
-names(binary_vars[binary_vars])
-
+names(binarne[binarne])
 ```
 ::: {style="text-align: justify;"}
 W zbiorze pznajdują się dwie zmienne binarne:mzmienna objaśniana - *odwołanie_rezerwacji* oraz zmienna objaśniająca *powracający_gość*.
@@ -313,7 +312,7 @@ W zbiorze pznajdują się dwie zmienne binarne:mzmienna objaśniana - *odwołani
 # 1. Lista zmiennych
 zmienne_ilosciowe <- c(
   "wcześniejsze_rezerwacje_nieodwołane",
-  "liczba_specjalnych_prośb",
+  "liczba_specjalnych_próśb",
   "liczba_nocy_weekendowych",
   "liczba_nocy_tygodniowych",
   "liczba_dorosłych",
@@ -351,7 +350,6 @@ zmienne_binarne <- c(
 # 2. Statystyki opisowe dla zmiennych ilościowych
 ilosciowe_tbl <- data.frame(
   zmienna = as.character(zmienne_ilosciowe),
-  typ = "ilościowa",
   min = sapply(hotel[zmienne_ilosciowe], function(x) min(x, na.rm = TRUE)),
   max = sapply(hotel[zmienne_ilosciowe], function(x) max(x, na.rm = TRUE)),
   średnia = round(sapply(hotel[zmienne_ilosciowe], function(x) mean(x, na.rm = TRUE)), 2),
@@ -365,12 +363,12 @@ ilosciowe_tbl <- data.frame(
 # 3. Statystyki opisowe dla zmiennych binarnych
 binarne_tbl <- data.frame(
   zmienna = as.character(zmienne_binarne),
-  typ = "binarna",
   min = 0,
   max = 1,
   średnia = round(sapply(hotel[binarne], function(x) mean(x, na.rm = TRUE)), 2),
   sd = round(sapply(hotel[binarne], function(x) sd(x, na.rm = TRUE)), 2),
-  Procent_1 = paste0(round(sapply(hotel[binarne], function(x) mean(x, na.rm = TRUE)*100), 2), "%")
+  Procent_1 = paste0(round(sapply(hotel[binarne], function(x) mean(x, na.rm = TRUE)*100), 2), "%"),
+  row.names = NULL
 )
 
 # 4. Statystyki opisowe dla zmiennych kategorycznych
@@ -383,7 +381,6 @@ categorical_summary <- function(df, vars) {
     top_pct <- paste(round(prop.table(tbl[1:min(3, length(tbl))])*100, 2)[1:min(3, length(tbl))], collapse = "%, ")
     tmp <- data.frame(
       zmienna = as.character(v),
-      typ = "kategoryczna",
       Najczęstsze = paste0(top_values, " (", top_pct, "%)")
     )
     res <- rbind(res, tmp)
@@ -428,33 +425,34 @@ wartości wraz z ich udziałem w całym zbiorze.
 
 ## 2.2. Analiza rozkładów
 
-*Tylko dla zmiennych ilościowych*
-
 ```{r}
-zmienne_il <- c(
- "liczba_specjalnych_prośb",
- "liczba_nocy_weekendowych",
- "liczba_nocy_tygodniowych",
- "liczba_dorosłych",
- "liczba_dzieci",
- "wymagane_miejsca_parkingowe",
- "wcześniejsze_odwołania",
- "liczba_zmian_rezerwacji",
- "średnia_cena_za_noc"
-)
-
-for (var in zmienne_il) {
+# 1. Histogramy dla zmiennych ilościowych
+for (var in zmienne_ilosciowe) {
+  if (!var %in% names(hotel)) next
   x <- hotel[[var]]
-  x_max <- quantile(x, 1, na.rm = TRUE)
-  p <- ggplot(hotel, aes_string(x = var)) +
-    geom_histogram(binwidth = 1, fill = "#440154", color = "white") +
-    coord_cartesian(xlim = c(min(x, na.rm = TRUE), x_max)) +
-    labs(
-      title = paste("Histogram zmiennej:", var),
-      x = "Wartość",
-      y = "Częstość"
-    ) +
-    theme_minimal(base_size = 12)
+  if (all(is.na(x))) next
+  xmax <- quantile(x, 0.99, na.rm = TRUE)
+  xmin <- min(x, na.rm = TRUE)
+  
+  ggplot(hotel, aes(x = .data[[var]])) +
+    geom_histogram(binwidth = 1, fill = "#440154", color = "white", na.rm = TRUE) +
+    coord_cartesian(xlim = c(xmin, xmax)) +
+    labs(title = var, x = "Wartość", y = "Częstość") +
+    theme_minimal(base_size = 12) -> p
+  print(p)
+}
+
+# 2. Wykresy słupkowe dla zmiennych kategorycznych i binarnych
+for (var in c(zmienne_kategoryczne, zmienne_binarne)) {
+  if (!var %in% names(hotel)) next
+  x <- hotel[[var]]
+  if (all(is.na(x))) next
+  
+  ggplot(hotel, aes(x = .data[[var]])) +
+    geom_bar(fill = "#21908d", color = "white", na.rm = TRUE) +
+    labs(title = var, x = "Kategoria", y = "Liczba obserwacji") +
+    theme_minimal(base_size = 12) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> p
   print(p)
 }
 ```
@@ -463,17 +461,72 @@ for (var in zmienne_il) {
 KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność,
 obecność ogonów itp.) 
 
-Wśród zobrazowanych zmiennych warte uwagi są następujące rozkłady:
--   *liczba_specjalnych_prośb* - pokazuje, że większość gości jest zadowolona z tego, co otrzymuje,
--  *liczba_nocy 
-........................
+!!!!!!!!!!!!!!!!!!!!!
+
 :::
+
 
 ## 2.3. Analiza korelacji
 
+Analizę korelacji przeprowadzono dla następujących zmiennych ilościowych oraz dla zmiennej objaśnianej:
+
+1. wcześniejsze_rezerwacje_nieodwołane,
+2. liczba_specjalnych_próśb,
+3. liczba_nocy_weekendowych,
+4. liczba_nocy_tygodniowych,
+5. liczba_dorosłych,
+6. liczba_dzieci,
+7. liczba_niemowląt,
+8. wymagane_miejsca_parkingowe,
+9. czas_wyprzedzenia_rezerwacji,
+10. wcześniejsze_odwołania,
+11. liczba_zmian_rezerwacji,
+12. liczba_dni_na_liście_oczekujących,
+13. średnia_cena_za_noc,
+14. odwołanie_rezerwacji.
+
 ```{r}
+hotelkorr <- hotel %>%
+  rename(
+  "1" = "wcześniejsze_rezerwacje_nieodwołane",
+  "2" = "liczba_specjalnych_próśb",
+  "3" = "liczba_nocy_weekendowych",
+  "4" = "liczba_nocy_tygodniowych",
+  "5" = "liczba_dorosłych",
+  "6" = "liczba_dzieci",
+  "7" = "liczba_niemowląt",
+  "8" = "wymagane_miejsca_parkingowe",
+  "9" = "czas_wyprzedzenia_rezerwacji",
+  "10" = "wcześniejsze_odwołania",
+  "11" = "liczba_zmian_rezerwacji",
+  "12" = "liczba_dni_na_liście_oczekujących",
+  "13" = "średnia_cena_za_noc",
+  "14" = "odwołanie_rezerwacji"
+)
+
+zmienne_i <- c(
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14"
+)
+
 # 1. MACIERZ KORELACJI PEARSONA
-macierz_korelacji <- cor(wina, method = "pearson")
+hotel_num <- hotelkorr[, zmienne_i]
+macierz_korelacji <- cor(hotel_num,
+                         method = "pearson",
+                         use = "pairwise.complete.obs"
+)
 
 # 1.2. WIZUALIZACJA MACIERZY KORELACJI
 corrplot(macierz_korelacji, 
@@ -482,59 +535,63 @@ corrplot(macierz_korelacji,
          title = "Macierz korelacji - metoda kółek",
          mar = c(0,0,1,0))
 ```
-
 ::: {style="text-align: justify;"}
-Z analizy macierzy korelacji można wywnioskować, że najsilniejsze
-zależności występują odpowiednio między ...
+Łatwo zauważyć, że wśród analizowanych zmiennych nie występuje wiele silnych zależności. Największą zależność dodatnią widać między *liczbą nocy weekendowych* oraz *liczbą nocy tygodniowych*. Z kolei najbardziej zauważalna zależność ujemna występuje między *liczbą specjalnych próśb* a *zmienną objaśnianą*. Kolejne zauważalne relacje występują głównie przy zmiennej objaśnianej. Poniżej przeprowadzono szczegółową analizę korelacji.
 :::
 
 ### 2.3.1. Testy istotności korelacji
 
 ```{r}
 cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
-cat("\n2.1. Test istotności korelacji zmiennych cukier resztkowy i gęstość:\n")
-cor_test_results2 <- cor.test(wina$cukier_resztkowy, wina$gęstość)
+cat("\n2.1. Test istotności korelacji zmiennych liczba nocy weekendowych oraz liczba nocy tygodniowych:\n")
+cor_test_results2 <- cor.test(hotel$liczba_nocy_weekendowych, hotel$liczba_nocy_tygodniowych)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
-cat("\n2.2. Test istotności korelacji zmiennych gęstość i alkohol:\n")
-cor_test_results2 <- cor.test(wina$gęstość, wina$alkohol)
+cat("\n2.2. Test istotności korelacji zmiennych liczba specjalnych próśb oraz odwołanie rezerwacji:\n")
+cor_test_results2 <- cor.test(hotel$liczba_specjalnych_próśb, hotel$odwołanie_rezerwacji)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
-cat("\n2.3. Test istotności korelacji zmiennych wolny dwutlenek siarki i całkowity dwutlenek siarki:\n")
-cor_test_results2 <- cor.test(wina$wolny_dwutlenek_siarki, wina$całkowity_dwutlenek_siarki)
+cat("\n2.3. Test istotności korelacji zmiennych wymagane miejsca parkingowe oraz odwołanie rezerwacji:\n")
+cor_test_results2 <- cor.test(hotel$wymagane_miejsca_parkingowe, hotel$odwołanie_rezerwacji)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
-cat("\n2.4. Test istotności korelacji zmiennych całkowity dwutlenek siarki i gęstość:\n")
-cor_test_results2 <- cor.test(wina$całkowity_dwutlenek_siarki, wina$gęstość)
+cat("\n2.4. Test istotności korelacji zmiennych czas wyprzedzenia rezerwacji oraz odwołanie rezerwacji:\n")
+cor_test_results2 <- cor.test(hotel$czas_wyprzedzenia_rezerwacji, hotel$odwołanie_rezerwacji)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
-cat("\n2.5. Test istotności korelacji zmiennych stała kwasowość i pH:\n")
-cor_test_results2 <- cor.test(wina$stała_kwasowość, wina$pH)
+cat("\n2.5. Test istotności korelacji zmiennych wcześniejsze odwołania oraz odwołanie rezerwacji:\n")
+cor_test_results2 <- cor.test(hotel$wcześniejsze_odwołania, hotel$odwołanie_rezerwacji)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
-cat("\n2.6. Test istotności korelacji zmiennych cukier resztkowy i alkohol:\n")
-cor_test_results2 <- cor.test(wina$cukier_resztkowy, wina$alkohol)
+cat("\n2.6. Test istotności korelacji zmiennych liczba zmian rezerwacji oraz odwołanie rezerwacji:\n")
+cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_rezerwacji)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 ```
-
 ::: {style="text-align: justify;"}
-krótkie wnioski
+Analiza korelacji wykazała, że wszystkie badane zależności są istotne statystycznie (p < 0,05), jednak w większości przypadków mają one słabą siłę. Najsilniejszą, umiarkowaną dodatnią korelację zaobserwowano pomiędzy liczbą nocy weekendowych i tygodniowych (r = 0,499). Pozostałe zmienne wykazują jedynie słabe lub bardzo słabe związki z odwołaniem rezerwacji, co oznacza, że choć zależności te są statystycznie istotne, ich znaczenie praktyczne jest ograniczone.
 :::
 
 ## 2.4. Analiza braków danych
 
 ```{r}
-print(colSums(is.na(wina)))
+print(colSums(is.na(hotel)))
 ```
-
+```{r}
+mean(is.na(hotel$liczba_dzieci)) * 100
+mean(is.na(hotel$firma)) * 100
+mean(is.na(hotel$agent_rezerwacji)) * 100
+```
 ::: {style="text-align: justify;"}
-Zbiór nie zawiera braków danych
+Braki danych występują w trzech zmiennych:
+-   *liczba_dzieci* - mniej niż 1% braków,
+-   *firma* - prawie 100% braków,
+-   *agent_rezerwacji* - niecałe 14% braków.
 :::
 
 ## 2.5. Analiza obserwacji odstających
