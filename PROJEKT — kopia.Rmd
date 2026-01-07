@@ -173,8 +173,10 @@ kodowaniu) lub klasteryzacji
 :::
 
 ```{r wine, echo=FALSE, results='asis'}
+# 1. Import danych 
 hotel <- read.csv("hotel_booking.csv", header=TRUE, sep=',')
 
+# 2. Zmiana nazw na polskie
 hotel <- hotel %>%
   rename(
   "odwołanie_rezerwacji" = "is_canceled",
@@ -215,6 +217,7 @@ hotel <- hotel %>%
   "numer_karty_kredytowej" = "credit_card"
 )
 
+# 3. Ustalenie wpływu zmiennych objaśniających na zmienną objaśnianą
 stymulanty <- c(
   "wcześniejsze_rezerwacje_nieodwołane",
   "powracający_gość",
@@ -259,6 +262,7 @@ inne <- c(
   "numer_karty_kredytowej"
 )
 
+# 4. Tabela podsumowująca
 metadata <- tibble(
   zmienna = names(hotel),
   typ_danych = sapply(hotel, class),
@@ -286,51 +290,130 @@ metadata %>%
 ```
 
 ```{r}
+# Identyfikacja zmiennych binarnych
 is_binary <- function(x) {
   is.numeric(x) && all(na.omit(x) %in% c(0,1))
 }
 
-binarne <- names(hotel)[sapply(hotel, is_binary)]
+binarne <- sapply(hotel, is_binary)
 
-binarne
-str(hotel)
-
-str(hotel$wcześniejsze_odwołania)
-str(hotel$wcześniejsze_rezerwacje_nieodwołane)
-str(hotel$wymagane_miejsca_parkingowe)
-str(hotel$liczba_specjalnych_prośb)
+names(binary_vars[binary_vars])
 
 ```
 
 # 2. Analiza eksploracyjna danych
 
 ## 2.1. Podstawowe statystyki opisowe
+::: {style="text-align: justify;"}
+W analizie ujęto zmienną objaśniającą oraz ilościowe i kategoryczne zmienne objaśniające.
+::::
 
-```{r echo=FALSE}
-zmienne_do_analizy <- c(
-  stymulanty,
-  destymulanty,
-  nominanty
+```{r}
+# 1. Lista zmiennych
+zmienne_ilosciowe <- c(
+  "wcześniejsze_rezerwacje_nieodwołane",
+  "liczba_specjalnych_prośb",
+  "liczba_nocy_weekendowych",
+  "liczba_nocy_tygodniowych",
+  "liczba_dorosłych",
+  "liczba_dzieci",
+  "liczba_niemowląt",
+  "wymagane_miejsca_parkingowe",
+  "czas_wyprzedzenia_rezerwacji",
+  "wcześniejsze_odwołania",
+  "liczba_zmian_rezerwacji",
+  "liczba_dni_na_liście_oczekujących",
+  "średnia_cena_za_noc"
 )
-num_cols <- sapply(hotel, is.numeric) & !(names(hotel) %in% binarne)
-vars <- names(hotel)[num_cols]
 
-summary_tbl <- data.frame(
-  zmienna    = vars,
-  min        = sapply(hotel[vars], function(x) min(x, na.rm = TRUE)),
-  max        = sapply(hotel[vars], function(x) max(x, na.rm = TRUE)),
-  średnia    = sapply(hotel[vars], function(x) mean(x, na.rm = TRUE)),
-  sd         = sapply(hotel[vars], function(x) sd(x, na.rm = TRUE)),
-  Q1         = sapply(hotel[vars], function(x) quantile(x, 0.25, na.rm = TRUE)),
-  mediana    = sapply(hotel[vars], function(x) median(x, na.rm = TRUE)),
-  Q3         = sapply(hotel[vars], function(x) quantile(x, 0.75, na.rm = TRUE)),
-  row.names  = NULL
+zmienne_kategoryczne <- c(
+  "typ_hotelu",
+  "rodzaj_wyżywienia",
+  "segment_rynku",
+  "kanał_dystrybucji",
+  "rodzaj_zarezerwowanego_pokoju",
+  "rodzaj_przydzielonego_pokoju",
+  "rodzaj_depozytu",
+  "typ_klienta",
+  "miesiąc_przyjazdu",
+  "numer_tygodnia_przyjazdu",
+  "rok_przyjazdu",
+  "dzień_przyjazdu_w_miesiącu",
+  "status_rezerwacji"
 )
 
-summary_tbl %>%
-  kable("html", digits = 2, caption = "Statystyki opisowe wina") %>%
+zmienne_binarne <- c(
+   "odwołanie_rezerwacji",
+   "powracający_gość"  
+)
+
+# 2. Statystyki opisowe dla zmiennych ilościowych
+ilosciowe_tbl <- data.frame(
+  zmienna = as.character(zmienne_ilosciowe),
+  typ = "ilościowa",
+  min = sapply(hotel[zmienne_ilosciowe], function(x) min(x, na.rm = TRUE)),
+  max = sapply(hotel[zmienne_ilosciowe], function(x) max(x, na.rm = TRUE)),
+  średnia = round(sapply(hotel[zmienne_ilosciowe], function(x) mean(x, na.rm = TRUE)), 2),
+  sd = round(sapply(hotel[zmienne_ilosciowe], function(x) sd(x, na.rm = TRUE)), 2),
+  Q1 = sapply(hotel[zmienne_ilosciowe], function(x) quantile(x, 0.25, na.rm = TRUE)),
+  mediana = sapply(hotel[zmienne_ilosciowe], function(x) median(x, na.rm = TRUE)),
+  Q3 = sapply(hotel[zmienne_ilosciowe], function(x) quantile(x, 0.75, na.rm = TRUE)),
+  row.names = NULL
+)
+
+# 3. Statystyki opisowe dla zmiennych binarnych
+binarne_tbl <- data.frame(
+  zmienna = as.character(zmienne_binarne),
+  typ = "binarna",
+  min = 0,
+  max = 1,
+  średnia = round(sapply(hotel[binarne], function(x) mean(x, na.rm = TRUE)), 2),
+  sd = round(sapply(hotel[binarne], function(x) sd(x, na.rm = TRUE)), 2),
+  Procent_1 = paste0(round(sapply(hotel[binarne], function(x) mean(x, na.rm = TRUE)*100), 2), "%")
+)
+
+# 4. Statystyki opisowe dla zmiennych kategorycznych
+categorical_summary <- function(df, vars) {
+  res <- data.frame()
+  for(v in vars) {
+    tbl <- table(df[[v]])
+    tbl <- sort(tbl, decreasing = TRUE)
+    top_values <- paste(names(tbl)[1:min(3, length(tbl))], collapse = ", ")
+    top_pct <- paste(round(prop.table(tbl[1:min(3, length(tbl))])*100, 2)[1:min(3, length(tbl))], collapse = "%, ")
+    tmp <- data.frame(
+      zmienna = as.character(v),
+      typ = "kategoryczna",
+      Najczęstsze = paste0(top_values, " (", top_pct, "%)")
+    )
+    res <- rbind(res, tmp)
+  }
+  return(res)
+}
+
+kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
+
+# 5. Wyświetlenie tabel
+ilosciowe_tbl %>%
+  kable("html", caption = "Zmienne ilościowe") %>%
   kable_styling(full_width = FALSE, bootstrap_options = "striped")
+
+binarne_tbl %>%
+  kable("html", caption = "Zmienne binarne") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+
+kategoryczne_tbl %>%
+  kable("html", caption = "Zmienne kategoryczne") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+
 ```
+::: {style="text-align: justify;"}
+Przeprowadzono analizę statystyczną zmiennych ilościowych, binarnych oraz kategorycznych.
+**Zmienne ilościowe** opisano za pomocą następujących statystyk: wartość minimalna i maksymalna, średnia, odchylenie standardowe oraz kwantyle 1, 2 (mediana) i 3. Niepokojąca jest ujemna wartość *średniej ceny za noc*, którą poddano dodatkowej analizie w kolejnych etapach przetwarzania danych.
+
+W zbiorze znajdują się również dwie **zmienne binarne**: zmienna objaśniana *odwołanie_rezerwacji* oraz zmienna objaśniająca *powracający_gość*. Kolumna Procent_1 przedstawia odsetek obserwacji, w których zmienna przyjmuje wartość 1, co pozwala na wyciągnięcie pierwszych istotnych wniosków.
+
+**Zmienne kategoryczne** opisano pod względem najczęściej występujących wartości wraz z ich udziałem w całym zbiorze.
+::::
 
 ## 2.2. Analiza rozkładów
 
