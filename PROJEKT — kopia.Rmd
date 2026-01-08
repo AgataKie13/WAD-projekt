@@ -437,6 +437,7 @@ wartości wraz z ich udziałem w całym zbiorze.
 
 ## 2.2. Analiza rozkładów
 
+<<<<<<< HEAD
 ```{r histogramy, echo=FALSE}
 # 1. Histogramy dla zmiennych ilościowych
 for (var in zmienne_ilosciowe) {
@@ -445,27 +446,80 @@ for (var in zmienne_ilosciowe) {
   if (all(is.na(x))) next
   xmax <- quantile(x, 0.99, na.rm = TRUE)
   xmin <- min(x, na.rm = TRUE)
+=======
+### 2.2.1. Histogramy dla zmiennych ilościowych w postaci logarytmicznej
+```{r}
+logarytm <- c("wcześniejsze_rezerwacje_nieodwołane",
+              "liczba_dzieci",
+              "liczba_niemowląt",
+              "wymagane_miejsca_parkingowe",
+              "wcześniejsze_odwołania",
+              "liczba_zmian_rezerwacji",
+              "liczba_dni_na_liście_oczekujących")
+
+for (var in logarytm) {
+  range_var <- max(hotel[[var]], na.rm = TRUE) - min(hotel[[var]], na.rm = TRUE)
+  binwidth <- max(1, range_var / 30)
   
-  ggplot(hotel, aes(x = .data[[var]])) +
-    geom_histogram(binwidth = 1, fill = "#440154", color = "white", na.rm = TRUE) +
-    coord_cartesian(xlim = c(xmin, xmax)) +
-    labs(title = var, x = "Wartość", y = "Częstość") +
-    theme_minimal(base_size = 12) -> p
+  p <- ggplot(hotel, aes(x = .data[[var]])) +
+    geom_histogram(aes(y = ..count.. + 1),  # dodajemy 1, żeby log(0) nie było
+                   fill = "#21908d", color = "white", binwidth = binwidth) +
+    scale_y_log10() +
+    labs(x = var,
+         y = "Liczba obserwacji (log)",
+         title = paste("Histogram:", var)) +
+    theme_minimal()
+>>>>>>> b260d3a9d56a0e6796d90802d0767258d52b92e5
+  
   print(p)
 }
+```
+### 2.2.2. Histogramy dla pozostałych zmiennych ilościowych
+```{r}
+iloscowe <- c("liczba_specjalnych_próśb",
+              "liczba_nocy_weekendowych",
+              "liczba_nocy_tygodniowych",
+              "liczba_dorosłych",
+              "czas_wyprzedzenia_rezerwacji"
+)
 
-# 2. Wykresy słupkowe dla zmiennych kategorycznych i binarnych
-for (var in c(zmienne_kategoryczne, zmienne_binarne)) {
+for (var in iloscowe) {
+  range_var <- max(hotel[[var]], na.rm = TRUE) - min(hotel[[var]], na.rm = TRUE)
+  binwidth <- range_var / 30
+  
+  q <- ggplot(hotel, aes(x = .data[[var]])) +
+    geom_histogram(fill = "steelblue", color = "white", binwidth = binwidth) +
+    labs(x = var,
+         y = "Częstość",
+         title = paste("Histogram:", var)) +
+    theme_minimal()
+  
+  print(q)
+}
+```
+### 2.2.2. Histogramy dla zmiennych kategorycznych
+```{r}
+for (var in c(zmienne_kategoryczne)) {
   if (!var %in% names(hotel)) next
   x <- hotel[[var]]
   if (all(is.na(x))) next
   
   ggplot(hotel, aes(x = .data[[var]])) +
-    geom_bar(fill = "#21908d", color = "white", na.rm = TRUE) +
+    geom_bar(
+      fill = "#21908d",
+      color = "white",
+      width = 0.7,    # 🔹 grubość słupków
+      na.rm = TRUE
+    ) +
     labs(title = var, x = "Kategoria", y = "Liczba obserwacji") +
     theme_minimal(base_size = 12) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> p
-  print(p)
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      strip.text = element_text(face = "bold"),
+      panel.grid.major = element_line(color = "#eeeeee"),
+      panel.grid.minor = element_blank()
+    ) -> w
+  print(w)
 }
 ```
 
@@ -494,7 +548,8 @@ oraz dla zmiennej objaśnianej:
 11. liczba_zmian_rezerwacji,
 12. liczba_dni_na_liście_oczekujących,
 13. średnia_cena_za_noc,
-14. odwołanie_rezerwacji.
+14. powracający_gość,
+15. odwołanie_rezerwacji.
 
 ```{r korelacja, echo=FALSE}
 hotelkorr <- hotel %>%
@@ -512,7 +567,8 @@ hotelkorr <- hotel %>%
   "11" = "liczba_zmian_rezerwacji",
   "12" = "liczba_dni_na_liście_oczekujących",
   "13" = "średnia_cena_za_noc",
-  "14" = "odwołanie_rezerwacji"
+  "14" = "powracający_gość",
+  "15" = "odwołanie_rezerwacji"
 )
 
 zmienne_i <- c(
@@ -529,7 +585,8 @@ zmienne_i <- c(
   "11",
   "12",
   "13",
-  "14"
+  "14",
+  "15"
 )
 
 # 1. MACIERZ KORELACJI PEARSONA
@@ -588,6 +645,11 @@ cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
 cat("\n2.6. Test istotności korelacji zmiennych liczba zmian rezerwacji oraz odwołanie rezerwacji:\n")
 cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_rezerwacji)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.7. Test istotności korelacji zmiennych powracający_gość, oraz odwołanie rezerwacji:\n")
+cor_test_results2 <- cor.test(hotel$powracający_gość, hotel$odwołanie_rezerwacji)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 ```
@@ -753,7 +815,9 @@ distance nie miały dominującego wpływu na estymację modelu.
 
 # 3. Obróbka zmiennych
 
-## 3.1. Obsługa obserwacji odstających - jeśli występują
+## 3.1. Obsługa braków danych
+
+## 3.2. Obsługa obserwacji odstających - jeśli występują
 
 !na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
 
