@@ -498,7 +498,6 @@ for (var in c(zmienne_kategoryczne)) {
     ) -> w
   print(w)
 }
-
 ```
 
 ::: {style="text-align:justify;"}
@@ -549,8 +548,6 @@ hotelkorr <- hotel %>%
   "15" = "odwołanie_rezerwacji"
 )
 
-
-str(hotel$typ_klienta)
 zmienne_i <- c(
   "1",
   "2",
@@ -618,6 +615,11 @@ cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 
 cat("\n2.6. Test istotności korelacji zmiennych liczba zmian rezerwacji oraz odwołanie rezerwacji:\n")
 cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_rezerwacji)
+cat("r =", round(cor_test_results2$estimate, 3), "\n")
+cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
+
+cat("\n2.7. Test istotności korelacji zmiennych powracający_gość, oraz odwołanie rezerwacji:\n")
+cor_test_results2 <- cor.test(hotel$powracający_gość, hotel$odwołanie_rezerwacji)
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 ```
