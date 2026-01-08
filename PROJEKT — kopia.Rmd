@@ -9,7 +9,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(include = FALSE)
 
 # Biblioteki:
 library(readr)
@@ -21,7 +21,8 @@ library(ggplot2)
 library(tidyr)
 library(kableExtra)
 library(broom)
-library(patchwork) 
+library(patchwork)
+library(DT)
 ```
 
 # 1. Wprowadzenie
@@ -173,7 +174,7 @@ kodowaniu) lub klasteryzacji
     modelowania, ale zostają do opisu danych.
 :::
 
-```{r wine, echo=FALSE, results='asis'}
+```{r wczytywanie danych i przekształcenia zmiennych, echo=FALSE, results='asis'}
 # 1. Import danych 
 hotel <- read.csv("hotel_booking.csv", header=TRUE, sep=',')
 
@@ -286,20 +287,31 @@ metadata <- tibble(
   select(-kolejnosc)
 
 metadata %>%
-  kable("html", digits = 2, caption = "Zmienne") %>%
-  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+  datatable(
+    rownames = FALSE,
+    options = list(pageLength = 15),
+    class = "stripe hover"
+  ) %>%
+  formatStyle(
+    "stymulanta_destymulanta",
+    backgroundColor = styleEqual(
+      c("zmienna objaśniana", "stymulanta", "destymulanta", "nominanta", "inne"),
+      c("#d1e7dd", "#e7f1ff", "#f8d7da", "#fff3cd", "#e2e3e5")
+    )
+  )
 ```
 
 ## 1.4. Identyfikacja zmiennych binarnych
 
-```{r echo=FALSE}
+```{r zmienne binarne, echo=FALSE}
 is_binary <- function(x) {
   is.numeric(x) && all(na.omit(x) %in% c(0,1))
 }
 
 binarne <- sapply(hotel, is_binary)
 
-names(binarne[binarne])
+cat("Zmienne binarne: ")
+cat(paste(names(binarne[binarne]), collapse = ", "))
 ```
 
 ::: {style="text-align: justify;"}
@@ -311,7 +323,7 @@ W zbiorze pznajdują się dwie zmienne binarne:mzmienna objaśniana -
 
 ## 2.1. Podstawowe statystyki opisowe
 
-```{r echo=FALSE}
+```{r statystyki, echo=FALSE}
 # 1. Lista zmiennych
 zmienne_ilosciowe <- c(
   "wcześniejsze_rezerwacje_nieodwołane",
@@ -395,16 +407,13 @@ kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
 
 # 5. Wyświetlenie tabel
 ilosciowe_tbl %>%
-  kable("html", caption = "Zmienne ilościowe") %>%
-  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+  datatable(caption = "Zmienne ilościowe", options = list(paging = FALSE))
 
 binarne_tbl %>%
-  kable("html", caption = "Zmienne binarne") %>%
-  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+  datatable(caption = "Zmienne binarne", options = list(paging = FALSE))
 
 kategoryczne_tbl %>%
-  kable("html", caption = "Zmienne kategoryczne") %>%
-  kable_styling(full_width = FALSE, bootstrap_options = "striped")
+  datatable(caption = "Zmienne kategoryczne", options = list(paging = FALSE))
 
 ```
 
@@ -428,7 +437,7 @@ wartości wraz z ich udziałem w całym zbiorze.
 
 ## 2.2. Analiza rozkładów
 
-```{r}
+```{r histogramy, echo=FALSE}
 # 1. Histogramy dla zmiennych ilościowych
 for (var in zmienne_ilosciowe) {
   if (!var %in% names(hotel)) next
@@ -487,7 +496,7 @@ oraz dla zmiennej objaśnianej:
 13. średnia_cena_za_noc,
 14. odwołanie_rezerwacji.
 
-```{r}
+```{r korelacja, echo=FALSE}
 hotelkorr <- hotel %>%
   rename(
   "1" = "wcześniejsze_rezerwacje_nieodwołane",
@@ -550,7 +559,7 @@ korelacji.
 
 ### 2.3.1. Testy istotności korelacji
 
-```{r}
+```{r istotność korelacji, echo=FALSE}
 cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
 cat("\n2.1. Test istotności korelacji zmiennych liczba nocy weekendowych oraz liczba nocy tygodniowych:\n")
 cor_test_results2 <- cor.test(hotel$liczba_nocy_weekendowych, hotel$liczba_nocy_tygodniowych)
@@ -595,27 +604,49 @@ ich znaczenie praktyczne jest ograniczone.
 
 ## 2.4. Analiza braków danych
 
-```{r}
+```{r NA, echo=FALSE}
 na_counts <- colSums(is.na(hotel))
 
-kable(
-  tibble::tibble(
-    Zmienna = names(na_counts),
-    Liczba_NA = na_counts
-  ),
-  caption = "Liczba braków danych (NA) w zmiennych",
-  align = c("l", "r")
-  ) |>
-  kable_styling(
-    bootstrap_options = c("striped", "hover", "condensed"),
-    full_width = FALSE
+na_tbl <- tibble(
+  Zmienna = names(na_counts),
+  Liczba_NA = na_counts)
+
+datatable(
+  na_tbl,
+  rownames = FALSE,
+  options = list(pageLength = 25, dom = 't'),
+  class = "stripe hover"
+) %>%
+  formatStyle(
+    "Liczba_NA",
+    target = "row",
+    backgroundColor = styleInterval(
+      c(0),
+      c("transparent", "#f8d7da")
+    )
   )
 ```
 
-```{r}
-mean(is.na(hotel$liczba_dzieci)) * 100
-mean(is.na(hotel$firma)) * 100
-mean(is.na(hotel$agent_rezerwacji)) * 100
+```{r procent NA, echo=FALSE}
+na_pct <- tibble(
+  Zmienna = c("liczba_dzieci", "firma", "agent_rezerwacji"),
+  Procent_NA = c(
+    mean(is.na(hotel$liczba_dzieci)),
+    mean(is.na(hotel$firma)),
+    mean(is.na(hotel$agent_rezerwacji))
+    ) * 100
+  )
+
+datatable(
+  na_pct,
+  rownames = FALSE,
+  class = "stripe hover compact",
+  options = list(pageLength = 5, dom = 't', paging = FALSE),
+  caption = htmltools::tags$caption(
+    style = "caption-side: upper;",
+    "Procent braków danych (NA) dla wskazanych zmiennych")
+  ) %>%
+  formatRound("Procent_NA", 2)
 ```
 
 ::: {style="text-align: justify;"}
@@ -626,7 +657,7 @@ niecałe 14% braków.
 
 ## 2.5. Analiza obserwacji odstających
 
-```{r}
+```{r outlaiers, echo=FALSE}
 wina_long <- wina %>%
   select(where(is.numeric)) %>%
   pivot_longer(
@@ -674,7 +705,7 @@ wykorzystaniem relacji między zmienną objaśnianą - jakość a zmiennymi
 objaśniającymi.
 :::
 
-```{r}
+```{r ?}
 layout(matrix(c(1, 2), nrow = TRUE, byrow = 2), heights = c(1, 1, 1))
 fit1 = lm(jakość ~ całkowity_dwutlenek_siarki,data=wina)
 plot(fit1,which=4, main="Jakość vs całkowity\ndwutlenek siarki")
@@ -726,7 +757,7 @@ distance nie miały dominującego wpływu na estymację modelu.
 
 !na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
 
-```{r}
+```{r ??}
 winsorize_iqr <- function(x) {
   Q1 <- quantile(x, 0.25, na.rm = TRUE)
   Q3 <- quantile(x, 0.75, na.rm = TRUE)
