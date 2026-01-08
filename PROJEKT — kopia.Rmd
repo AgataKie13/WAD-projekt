@@ -2,7 +2,7 @@
 title: "Wielowymiarowa analiza jakości wina na podstawie danych ..."
 author: "Agata Kierznikowicz, Zuzanna Łomża"
 date: "2025-12-05"
-output: html_document
+output: rmdformats::readthedown
 editor_options: 
   markdown: 
     wrap: 72
@@ -289,6 +289,7 @@ metadata %>%
   kable("html", digits = 2, caption = "Zmienne") %>%
   kable_styling(full_width = FALSE, bootstrap_options = "striped")
 ```
+
 ## 1.4. Identyfikacja zmiennych binarnych
 
 ```{r echo=FALSE}
@@ -300,9 +301,11 @@ binarne <- sapply(hotel, is_binary)
 
 names(binarne[binarne])
 ```
+
 ::: {style="text-align: justify;"}
-W zbiorze pznajdują się dwie zmienne binarne:mzmienna objaśniana - *odwołanie_rezerwacji* oraz zmienna objaśniająca *powracający_gość*.
-::::
+W zbiorze pznajdują się dwie zmienne binarne:mzmienna objaśniana -
+*odwołanie_rezerwacji* oraz zmienna objaśniająca *powracający_gość*.
+:::
 
 # 2. Analiza eksploracyjna danych
 
@@ -458,27 +461,26 @@ for (var in c(zmienne_kategoryczne, zmienne_binarne)) {
 ```
 
 ::: {style="text-align:justify;"}
-KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność,
-obecność ogonów itp.) 
+KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność, obecność ogonów
+itp.)
 
 !!!!!!!!!!!!!!!!!!!!!
-
 :::
-
 
 ## 2.3. Analiza korelacji
 
-Analizę korelacji przeprowadzono dla następujących zmiennych ilościowych oraz dla zmiennej objaśnianej:
+Analizę korelacji przeprowadzono dla następujących zmiennych ilościowych
+oraz dla zmiennej objaśnianej:
 
-1. wcześniejsze_rezerwacje_nieodwołane,
-2. liczba_specjalnych_próśb,
-3. liczba_nocy_weekendowych,
-4. liczba_nocy_tygodniowych,
-5. liczba_dorosłych,
-6. liczba_dzieci,
-7. liczba_niemowląt,
-8. wymagane_miejsca_parkingowe,
-9. czas_wyprzedzenia_rezerwacji,
+1.  wcześniejsze_rezerwacje_nieodwołane,
+2.  liczba_specjalnych_próśb,
+3.  liczba_nocy_weekendowych,
+4.  liczba_nocy_tygodniowych,
+5.  liczba_dorosłych,
+6.  liczba_dzieci,
+7.  liczba_niemowląt,
+8.  wymagane_miejsca_parkingowe,
+9.  czas_wyprzedzenia_rezerwacji,
 10. wcześniejsze_odwołania,
 11. liczba_zmian_rezerwacji,
 12. liczba_dni_na_liście_oczekujących,
@@ -535,8 +537,15 @@ corrplot(macierz_korelacji,
          title = "Macierz korelacji - metoda kółek",
          mar = c(0,0,1,0))
 ```
+
 ::: {style="text-align: justify;"}
-Łatwo zauważyć, że wśród analizowanych zmiennych nie występuje wiele silnych zależności. Największą zależność dodatnią widać między *liczbą nocy weekendowych* oraz *liczbą nocy tygodniowych*. Z kolei najbardziej zauważalna zależność ujemna występuje między *liczbą specjalnych próśb* a *zmienną objaśnianą*. Kolejne zauważalne relacje występują głównie przy zmiennej objaśnianej. Poniżej przeprowadzono szczegółową analizę korelacji.
+Łatwo zauważyć, że wśród analizowanych zmiennych nie występuje wiele
+silnych zależności. Największą zależność dodatnią widać między *liczbą
+nocy weekendowych* oraz *liczbą nocy tygodniowych*. Z kolei najbardziej
+zauważalna zależność ujemna występuje między *liczbą specjalnych próśb*
+a *zmienną objaśnianą*. Kolejne zauważalne relacje występują głównie
+przy zmiennej objaśnianej. Poniżej przeprowadzono szczegółową analizę
+korelacji.
 :::
 
 ### 2.3.1. Testy istotności korelacji
@@ -573,25 +582,46 @@ cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_re
 cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 ```
+
 ::: {style="text-align: justify;"}
-Analiza korelacji wykazała, że wszystkie badane zależności są istotne statystycznie (p < 0,05), jednak w większości przypadków mają one słabą siłę. Najsilniejszą, umiarkowaną dodatnią korelację zaobserwowano pomiędzy liczbą nocy weekendowych i tygodniowych (r = 0,499). Pozostałe zmienne wykazują jedynie słabe lub bardzo słabe związki z odwołaniem rezerwacji, co oznacza, że choć zależności te są statystycznie istotne, ich znaczenie praktyczne jest ograniczone.
+Analiza korelacji wykazała, że wszystkie badane zależności są istotne
+statystycznie (p \< 0,05), jednak w większości przypadków mają one słabą
+siłę. Najsilniejszą, umiarkowaną dodatnią korelację zaobserwowano
+pomiędzy liczbą nocy weekendowych i tygodniowych (r = 0,499). Pozostałe
+zmienne wykazują jedynie słabe lub bardzo słabe związki z odwołaniem
+rezerwacji, co oznacza, że choć zależności te są statystycznie istotne,
+ich znaczenie praktyczne jest ograniczone.
 :::
 
 ## 2.4. Analiza braków danych
 
 ```{r}
-print(colSums(is.na(hotel)))
+na_counts <- colSums(is.na(hotel))
+
+kable(
+  tibble::tibble(
+    Zmienna = names(na_counts),
+    Liczba_NA = na_counts
+  ),
+  caption = "Liczba braków danych (NA) w zmiennych",
+  align = c("l", "r")
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE
+  )
 ```
+
 ```{r}
 mean(is.na(hotel$liczba_dzieci)) * 100
 mean(is.na(hotel$firma)) * 100
 mean(is.na(hotel$agent_rezerwacji)) * 100
 ```
+
 ::: {style="text-align: justify;"}
-Braki danych występują w trzech zmiennych:
--   *liczba_dzieci* - mniej niż 1% braków,
--   *firma* - prawie 100% braków,
--   *agent_rezerwacji* - niecałe 14% braków.
+Braki danych występują w trzech zmiennych: - *liczba_dzieci* - mniej niż
+1% braków, - *firma* - prawie 100% braków, - *agent_rezerwacji* -
+niecałe 14% braków.
 :::
 
 ## 2.5. Analiza obserwacji odstających
