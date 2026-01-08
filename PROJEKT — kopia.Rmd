@@ -426,35 +426,104 @@ wartości wraz z ich udziałem w całym zbiorze.
 ## 2.2. Analiza rozkładów
 
 ```{r}
-# 1. Histogramy dla zmiennych ilościowych
+ggplot(hotel, aes(x = wymagane_miejsca_parkingowe)) +
+  geom_bar(fill = "#21908d", color = "white") +
+  scale_y_log10() +  # 🔹 logarytmiczna skala
+  labs(x = "Wymagane miejsca parkingowe", 
+       y = "Liczba obserwacji (log)", 
+       title = "Histogram miejsc parkingowych") +
+  theme_minimal()
+
+```
+
+```{r}
+# 1️⃣ Histogramy dla zmiennych ilościowych (oś y logarytmiczna, bez problemów z zerami)
 for (var in zmienne_ilosciowe) {
   if (!var %in% names(hotel)) next
   x <- hotel[[var]]
   if (all(is.na(x))) next
+  
+  # dynamiczny binwidth: 1% rozpiętości danych
   xmax <- quantile(x, 0.99, na.rm = TRUE)
   xmin <- min(x, na.rm = TRUE)
+  binwidth_val <- (xmax - xmin) / 30  # ok. 30 słupków
   
   ggplot(hotel, aes(x = .data[[var]])) +
-    geom_histogram(binwidth = 1, fill = "#440154", color = "white", na.rm = TRUE) +
+    geom_histogram(
+      aes(y = ..count.. + 1),  # 🔹 dodanie 1, żeby uniknąć log(0)
+      binwidth = binwidth_val,
+      fill = "#440154",
+      color = "white",
+      na.rm = TRUE
+    ) +
     coord_cartesian(xlim = c(xmin, xmax)) +
-    labs(title = var, x = "Wartość", y = "Częstość") +
-    theme_minimal(base_size = 12) -> p
+    scale_y_log10(labels = scales::comma_format()) +  # 🔹 logarytmiczna oś y
+    labs(title = var, x = "Wartość", y = "Częstość (log10)") +
+    theme_minimal(base_size = 12) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      panel.grid.major = element_line(color = "#eeeeee"),
+      panel.grid.minor = element_blank()
+    ) -> p
   print(p)
 }
 
-# 2. Wykresy słupkowe dla zmiennych kategorycznych i binarnych
+```
+
+```{r}
+# 1️⃣ Histogramy dla zmiennych ilościowych
+for (var in zmienne_ilosciowe) {
+  if (!var %in% names(hotel)) next
+  x <- hotel[[var]]
+  if (all(is.na(x))) next
+  
+  # dynamiczny binwidth: 1% rozpiętości danych
+  xmax <- quantile(x, 0.99, na.rm = TRUE)
+  xmin <- min(x, na.rm = TRUE)
+  binwidth_val <- (xmax - xmin) / 30  # ok. 30 słupków
+  
+  ggplot(hotel, aes(x = .data[[var]])) +
+    geom_histogram(
+      binwidth = binwidth_val,
+      fill = "#440154",
+      color = "white",
+      na.rm = TRUE
+    ) +
+    coord_cartesian(xlim = c(xmin, xmax)) +
+    labs(title = var, x = "Wartość", y = "Częstość") +
+    theme_minimal(base_size = 12) +
+    theme(
+      strip.text = element_text(face = "bold"),
+      panel.grid.major = element_line(color = "#eeeeee"),
+      panel.grid.minor = element_blank()
+    ) -> p
+  print(p)
+}
+
+# 2️⃣ Wykresy słupkowe dla zmiennych kategorycznych i binarnych
 for (var in c(zmienne_kategoryczne, zmienne_binarne)) {
   if (!var %in% names(hotel)) next
   x <- hotel[[var]]
   if (all(is.na(x))) next
   
   ggplot(hotel, aes(x = .data[[var]])) +
-    geom_bar(fill = "#21908d", color = "white", na.rm = TRUE) +
+    geom_bar(
+      fill = "#21908d",
+      color = "white",
+      width = 0.7,    # 🔹 grubość słupków
+      na.rm = TRUE
+    ) +
     labs(title = var, x = "Kategoria", y = "Liczba obserwacji") +
     theme_minimal(base_size = 12) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) -> p
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      strip.text = element_text(face = "bold"),
+      panel.grid.major = element_line(color = "#eeeeee"),
+      panel.grid.minor = element_blank()
+    ) -> p
   print(p)
 }
+
 ```
 
 ::: {style="text-align:justify;"}
@@ -464,7 +533,6 @@ obecność ogonów itp.)
 !!!!!!!!!!!!!!!!!!!!!
 
 :::
-
 
 ## 2.3. Analiza korelacji
 
@@ -483,7 +551,8 @@ Analizę korelacji przeprowadzono dla następujących zmiennych ilościowych ora
 11. liczba_zmian_rezerwacji,
 12. liczba_dni_na_liście_oczekujących,
 13. średnia_cena_za_noc,
-14. odwołanie_rezerwacji.
+14. powracający_gość,
+15. odwołanie_rezerwacji.
 
 ```{r}
 hotelkorr <- hotel %>%
@@ -501,9 +570,12 @@ hotelkorr <- hotel %>%
   "11" = "liczba_zmian_rezerwacji",
   "12" = "liczba_dni_na_liście_oczekujących",
   "13" = "średnia_cena_za_noc",
-  "14" = "odwołanie_rezerwacji"
+  "14" = "powracający_gość",
+  "15" = "odwołanie_rezerwacji"
 )
 
+
+str(hotel$typ_klienta)
 zmienne_i <- c(
   "1",
   "2",
@@ -518,7 +590,8 @@ zmienne_i <- c(
   "11",
   "12",
   "13",
-  "14"
+  "14",
+  "15"
 )
 
 # 1. MACIERZ KORELACJI PEARSONA
@@ -692,7 +765,9 @@ distance nie miały dominującego wpływu na estymację modelu.
 
 # 3. Obróbka zmiennych
 
-## 3.1. Obsługa obserwacji odstających - jeśli występują
+## 3.1. Obsługa braków danych
+
+## 3.2. Obsługa obserwacji odstających - jeśli występują
 
 !na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
 
