@@ -425,83 +425,58 @@ wartości wraz z ich udziałem w całym zbiorze.
 
 ## 2.2. Analiza rozkładów
 
+### 2.2.1. Histogramy dla zmiennych ilościowych w postaci logarytmicznej
 ```{r}
-ggplot(hotel, aes(x = wymagane_miejsca_parkingowe)) +
-  geom_bar(fill = "#21908d", color = "white") +
-  scale_y_log10() +  # 🔹 logarytmiczna skala
-  labs(x = "Wymagane miejsca parkingowe", 
-       y = "Liczba obserwacji (log)", 
-       title = "Histogram miejsc parkingowych") +
-  theme_minimal()
+logarytm <- c("wcześniejsze_rezerwacje_nieodwołane",
+              "liczba_dzieci",
+              "liczba_niemowląt",
+              "wymagane_miejsca_parkingowe",
+              "wcześniejsze_odwołania",
+              "liczba_zmian_rezerwacji",
+              "liczba_dni_na_liście_oczekujących")
 
-```
-
-```{r}
-# 1️⃣ Histogramy dla zmiennych ilościowych (oś y logarytmiczna, bez problemów z zerami)
-for (var in zmienne_ilosciowe) {
-  if (!var %in% names(hotel)) next
-  x <- hotel[[var]]
-  if (all(is.na(x))) next
+for (var in logarytm) {
+  range_var <- max(hotel[[var]], na.rm = TRUE) - min(hotel[[var]], na.rm = TRUE)
+  binwidth <- max(1, range_var / 30)
   
-  # dynamiczny binwidth: 1% rozpiętości danych
-  xmax <- quantile(x, 0.99, na.rm = TRUE)
-  xmin <- min(x, na.rm = TRUE)
-  binwidth_val <- (xmax - xmin) / 30  # ok. 30 słupków
+  p <- ggplot(hotel, aes(x = .data[[var]])) +
+    geom_histogram(aes(y = ..count.. + 1),  # dodajemy 1, żeby log(0) nie było
+                   fill = "#21908d", color = "white", binwidth = binwidth) +
+    scale_y_log10() +
+    labs(x = var,
+         y = "Liczba obserwacji (log)",
+         title = paste("Histogram:", var)) +
+    theme_minimal()
   
-  ggplot(hotel, aes(x = .data[[var]])) +
-    geom_histogram(
-      aes(y = ..count.. + 1),  # 🔹 dodanie 1, żeby uniknąć log(0)
-      binwidth = binwidth_val,
-      fill = "#440154",
-      color = "white",
-      na.rm = TRUE
-    ) +
-    coord_cartesian(xlim = c(xmin, xmax)) +
-    scale_y_log10(labels = scales::comma_format()) +  # 🔹 logarytmiczna oś y
-    labs(title = var, x = "Wartość", y = "Częstość (log10)") +
-    theme_minimal(base_size = 12) +
-    theme(
-      strip.text = element_text(face = "bold"),
-      panel.grid.major = element_line(color = "#eeeeee"),
-      panel.grid.minor = element_blank()
-    ) -> p
   print(p)
 }
-
 ```
-
+### 2.2.2. Histogramy dla pozostałych zmiennych ilościowych
 ```{r}
-# 1️⃣ Histogramy dla zmiennych ilościowych
-for (var in zmienne_ilosciowe) {
-  if (!var %in% names(hotel)) next
-  x <- hotel[[var]]
-  if (all(is.na(x))) next
-  
-  # dynamiczny binwidth: 1% rozpiętości danych
-  xmax <- quantile(x, 0.99, na.rm = TRUE)
-  xmin <- min(x, na.rm = TRUE)
-  binwidth_val <- (xmax - xmin) / 30  # ok. 30 słupków
-  
-  ggplot(hotel, aes(x = .data[[var]])) +
-    geom_histogram(
-      binwidth = binwidth_val,
-      fill = "#440154",
-      color = "white",
-      na.rm = TRUE
-    ) +
-    coord_cartesian(xlim = c(xmin, xmax)) +
-    labs(title = var, x = "Wartość", y = "Częstość") +
-    theme_minimal(base_size = 12) +
-    theme(
-      strip.text = element_text(face = "bold"),
-      panel.grid.major = element_line(color = "#eeeeee"),
-      panel.grid.minor = element_blank()
-    ) -> p
-  print(p)
-}
+iloscowe <- c("liczba_specjalnych_próśb",
+              "liczba_nocy_weekendowych",
+              "liczba_nocy_tygodniowych",
+              "liczba_dorosłych",
+              "czas_wyprzedzenia_rezerwacji"
+)
 
-# 2️⃣ Wykresy słupkowe dla zmiennych kategorycznych i binarnych
-for (var in c(zmienne_kategoryczne, zmienne_binarne)) {
+for (var in iloscowe) {
+  range_var <- max(hotel[[var]], na.rm = TRUE) - min(hotel[[var]], na.rm = TRUE)
+  binwidth <- range_var / 30
+  
+  q <- ggplot(hotel, aes(x = .data[[var]])) +
+    geom_histogram(fill = "steelblue", color = "white", binwidth = binwidth) +
+    labs(x = var,
+         y = "Częstość",
+         title = paste("Histogram:", var)) +
+    theme_minimal()
+  
+  print(q)
+}
+```
+### 2.2.2. Histogramy dla zmiennych kategorycznych
+```{r}
+for (var in c(zmienne_kategoryczne)) {
   if (!var %in% names(hotel)) next
   x <- hotel[[var]]
   if (all(is.na(x))) next
@@ -520,8 +495,8 @@ for (var in c(zmienne_kategoryczne, zmienne_binarne)) {
       strip.text = element_text(face = "bold"),
       panel.grid.major = element_line(color = "#eeeeee"),
       panel.grid.minor = element_blank()
-    ) -> p
-  print(p)
+    ) -> w
+  print(w)
 }
 
 ```
