@@ -313,7 +313,6 @@ binarne <- sapply(hotel, is_binary)
 cat("Zmienne binarne: ")
 cat(paste(names(binarne[binarne]), collapse = ", "))
 ```
-
 ::: {style="text-align: justify;"}
 W zbiorze pznajdują się dwie zmienne binarne:mzmienna objaśniana -
 *odwołanie_rezerwacji* oraz zmienna objaśniająca *powracający_gość*.
@@ -416,7 +415,6 @@ kategoryczne_tbl %>%
   datatable(caption = "Zmienne kategoryczne", options = list(paging = FALSE))
 
 ```
-
 ::: {style="text-align: justify;"}
 Przeprowadzono analizę statystyczną zmiennych ilościowych, binarnych
 oraz kategorycznych. **Zmienne ilościowe** opisano za pomocą
@@ -437,18 +435,8 @@ wartości wraz z ich udziałem w całym zbiorze.
 
 ## 2.2. Analiza rozkładów
 
-<<<<<<< HEAD
-```{r histogramy, echo=FALSE}
-# 1. Histogramy dla zmiennych ilościowych
-for (var in zmienne_ilosciowe) {
-  if (!var %in% names(hotel)) next
-  x <- hotel[[var]]
-  if (all(is.na(x))) next
-  xmax <- quantile(x, 0.99, na.rm = TRUE)
-  xmin <- min(x, na.rm = TRUE)
-=======
 ### 2.2.1. Histogramy dla zmiennych ilościowych w postaci logarytmicznej
-```{r}
+```{r histogramy ilościowe log}
 logarytm <- c("wcześniejsze_rezerwacje_nieodwołane",
               "liczba_dzieci",
               "liczba_niemowląt",
@@ -469,13 +457,19 @@ for (var in logarytm) {
          y = "Liczba obserwacji (log)",
          title = paste("Histogram:", var)) +
     theme_minimal()
->>>>>>> b260d3a9d56a0e6796d90802d0767258d52b92e5
   
   print(p)
 }
 ```
+::: {style="text-align: justify;"}
+Histogramy zmiennych ilościowych zaprezentowano z wykorzystaniem logarytmicznej osi OY, co pozwoliło odsłonić strukturę rozkładów niewidoczną przy klasycznej skali. Wynika to z faktu, że we wszystkich przypadkach zdecydowanie dominuje wartość „0”, skutecznie maskująca zróżnicowanie pozostałych obserwacji.
+Rozkłady zmiennych *liczba dzieci*, *liczba niemowląt* oraz *wymagane miejsca parkingowe* charakteryzują się wyraźnym skupieniem obserwacji w dolnym zakresie oraz obecnością wartości skrajnych (np. 10 dzieci w jednej obserwacji), które zostaną odpowiednio przekształcone w dalszej części analizy.
+Z kolei zmienne *wcześniejsze rezerwacje nieodwołane*, *liczba zmian rezerwacji* oraz *liczba dni na liście oczekujących* wykazują mniejsze zróżnicowanie - odchylenia od wartości centralnych są ograniczone, a rozkłady pozostają bardziej zwarte.
+Zmienna *wcześniejsze odwołania* charakteryzuje się nieregularnym, „poszarpanym” przebiegiem, co utrudnia jednoznaczną identyfikację jej rozkładu. Mimo to, podobnie jak w przypadku pozostałych analizowanych zmiennych, największe zagęszczenie obserwacji występuje w dolnym zakresie wartości.
+Wspólną cechą wszystkich analizowanych zmiennych jest asymetria prawostronna, co wskazuje na obecność nielicznych, lecz istotnych obserwacji o wyższych wartościach.
+::::
 ### 2.2.2. Histogramy dla pozostałych zmiennych ilościowych
-```{r}
+```{r histogramy ilościowe}
 iloscowe <- c("liczba_specjalnych_próśb",
               "liczba_nocy_weekendowych",
               "liczba_nocy_tygodniowych",
@@ -497,8 +491,11 @@ for (var in iloscowe) {
   print(q)
 }
 ```
+::: {style="text-align: justify;"}
+Analizowane pięć zmiennych liczbowych wykazuje wyraźnie zróżnicowane kształty rozkładów, co widać na przygotowanych histogramach. W każdej z nich obserwacje koncentrują się głównie przy niskich wartościach, jednak tylko zmienna *czas_wyprzedzenia_rezerwacji* prezentuje typowy rozkład prawoskośny, wskazując, że większość rezerwacji dokonywana jest z niewielkim wyprzedzeniem, przy jednoczesnym istnieniu nielicznych, bardzo odległych terminów. W przypadku zmiennej *liczba_nocy_tygodniowych* rozkład jest zbliżony do normalnego, co sugeruje równomierne rozłożenie długości pobytów tygodniowych wokół wartości średniej. Pozostałe trzy zmienne - *liczba_specjalnych_próśb*, *liczba_nocy_weekendowych* oraz *liczba_dorosłych* - nie wykazują jednoznacznych, charakterystycznych form rozkładu. Histogramy pokazują ich nieregularne, niejednorodne rozmieszczenie, z niewielkimi skupieniami w dolnym zakresie i obecnością wartości odstających. Analiza wizualna tych wykresów pozwala zidentyfikować zarówno typowe zachowania, jak i obserwacje nietypowe, które mogą wymagać uwzględnienia przy dalszej modelowej analizie.
+::::
 ### 2.2.2. Histogramy dla zmiennych kategorycznych
-```{r}
+```{r histogramy kategoryczne}
 for (var in c(zmienne_kategoryczne)) {
   if (!var %in% names(hotel)) next
   x <- hotel[[var]]
@@ -522,16 +519,14 @@ for (var in c(zmienne_kategoryczne)) {
   print(w)
 }
 ```
-
 ::: {style="text-align:justify;"}
-KOMENTARZ - Krótko skomentuj kształt rozkładu (skośność, obecność ogonów
-itp.)
-
-!!!!!!!!!!!!!!!!!!!!!
+Wykresy rozkładów zmiennych kategorycznych pozwoliły przyjrzeć się strukturze danych, wskazać dominujące kategorie oraz wstępnie ocenić zmienne potencjalnie wpływające na *odwołanie_rezerwacji.* Na podstawie wizualizacji można zauważyć, że największe zróżnicowanie udziału odwołań występuje w przypadku zmiennej *rodzaj_depozytu*, co sugeruje jej kluczową rolę w dalszej analizie. Wyraźne różnice między kategoriami widać również w zmiennych *segment_rynku*, *kanał_dystrybucji* oraz *typ_klienta*, co odzwierciedla różne profile klientów i sposoby dokonywania rezerwacji.
+Zmienne takie jak *rodzaj_wyżywienia* i *typ_hotelu* również wykazują dominację niektórych kategorii; choć same w sobie nie decydują bezpośrednio o odwołaniach, mogą wspomagać analizę w połączeniu z innymi cechami, np. ceną czy długością pobytu. Wykresy zmiennych czasowych, *miesiąc_przyjazdu* i *numer_tygodnia_przyjazdu*, pokazują okresy planowanych pobytów i pozwalają uchwycić sezonowe wzorce rezerwacji, które mogą pośrednio wpływać na częstość anulowań.
+Na tej podstawie zmienne *rodzaj_depozytu*, *segment_rynku*, *kanał_dystrybucji*, *typ_klienta*, a także *miesiąc_przyjazdu* i *numer_tygodnia_przyjazdu* wydają się najbardziej wartościowe do dalszej analizy.
 :::
 
 ## 2.3. Analiza korelacji
-
+::: {style="text-align:justify;"}
 Analizę korelacji przeprowadzono dla następujących zmiennych ilościowych
 oraz dla zmiennej objaśnianej:
 
@@ -550,7 +545,7 @@ oraz dla zmiennej objaśnianej:
 13. średnia_cena_za_noc,
 14. powracający_gość,
 15. odwołanie_rezerwacji.
-
+::::
 ```{r korelacja, echo=FALSE}
 hotelkorr <- hotel %>%
   rename(
@@ -710,11 +705,11 @@ datatable(
   ) %>%
   formatRound("Procent_NA", 2)
 ```
-
 ::: {style="text-align: justify;"}
-Braki danych występują w trzech zmiennych: - *liczba_dzieci* - mniej niż
-1% braków, - *firma* - prawie 100% braków, - *agent_rezerwacji* -
-niecałe 14% braków.
+Braki danych występują w trzech zmiennych:
+-   *liczba_dzieci* - mniej niż 1% braków,
+-   *firma* - prawie 100% braków,
+-   *agent_rezerwacji* - niecałe 14% braków.
 :::
 
 ## 2.5. Analiza obserwacji odstających
