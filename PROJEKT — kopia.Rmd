@@ -779,16 +779,13 @@ datatable(
   na_tbl,
   rownames = FALSE,
   options = list(pageLength = 25, dom = 't'),
-  class = "stripe hover"
-) %>%
+  class = "stripe hover") %>%
   formatStyle(
     "Liczba_NA",
     target = "row",
     backgroundColor = styleInterval(
       c(0),
-      c("transparent", "#f8d7da")
-    )
-  )
+      c("transparent", "#f8d7da")))
 ```
 
 ```{r procent NA, echo=FALSE}
@@ -969,24 +966,33 @@ obserwacji o najwyższym wpływie z wyżej wymienionych sześciu zmiennych,
 a następnie ponowną kalibrację modelu na oczyszczonym zbiorze danych.
 :::
 
-# 3. Obróbka zmiennych
+# 3. Czyszczenie danych
 
-## 3.1. Obsługa braków danych
+## 3.1. Obsługa braków wartości
 
-Opisz, jak postępowałeś z brakami danych: • usuwanie obserwacji, •
-uzupełnianie braków danych Uzasadnij wybrane podejście.
+### 3.1.1. Analiza występowania braków danych
 
-```{r obsługa NA, message=FALSE, warning=FALSE}
+Poniżej przeprowdzono dokładną analizę braków danych w zmiennych liczba_dzieci, agent_rezerwacji oraz firma, mającą na celu wskazanie dalszego postępowania.
+
+```{r obsługa NA}
 hotel_miss <- hotel %>% select(liczba_dzieci, firma, agent_rezerwacji)
 gg_miss_upset(hotel_miss)
 ```
+::: {style="text-align: justify;"}
+W celu dokładniejszej analizy utworzono wykres UpSet, który prezentuje współwystępowanie braków między zmiennymi. Wynika z niego, że:
+- dla zmiennej liczba_dzieci wszystkie 4 braki występują współzależnie: 2 braki z wartościami NA w zmiennej firma oraz 2 braki z brakami we wszystkich dwóch pozostałych analizowanych zmiennych;
+- dla zmiennej agent_rezerwacji ok. 9,8 tys. braków (ok. `r round(9758/16340*100, 2)`%) występuje wspólnie z brakami w zmiennej firma, a 2 braki, jak już ustalono, wraz z brakami w pozostałych zmiennych. Natomiast blisko 6,6 tys. braków (ok. `r round(6580/16340*100, 2)`%) występuje niezależnie;
+- w zmiennej firma, poza wskazanymi zależnościami braków, zdecydowana większość wartości NA (ok. `r round(102831/112593*100, 2)`%) występuje niezależnie.
+:::
 
 ```{r test MCAR, echo=FALSE}
-test_result <- mcar_test(hotel_miss)
-test_df <- as.data.frame(test_result)
-test_table <- kable(test_df, format = "html", caption = "Wyniki testu MCAR: Missing Completely At Random") %>%
-  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
-test_table
+mcar_test(hotel_miss) %>%
+  as.data.frame() %>% 
+  mutate(statistic = round(statistic, 3)) %>%
+  datatable(test_df,
+            rownames = FALSE,
+            caption = "Wyniki testu MCAR: Missing Completely At Random",
+            options = list(dom = 't', paging = FALSE))
 ```
 
 ::: {style="text-align: justify;"}
@@ -999,7 +1005,56 @@ odpowiednich metod radzenia sobie z brakami danych, takich jak imputacja
 lub modele uwzględniające ich obecność.
 :::
 
-## 3.2. Obsługa obserwacji odstających - jeśli występują
+### 3.1.2. Usuwanie braków danych
+
+::: {style="text-align: justify;"}
+Na podstawie powyższej analizy wysunięto następujące wnioski:
+
+- zmienna **lista_dzieci**
+Wartości NA występujące w tej zmiennej stanowią marginalny odsetek obserwacji (0,003%). Ponadto, współwystępują one z brakami w pozostałych analizowanych pod kądtem braków zmiennych. Zaleca się wobec tego usunięcie rekordów z brakami, bez stosowania imputacji.
+
+- zmienna **agent_rezerwacji**
+Brakujące wartości zmiennej agent_rezerwacji stanowią 13,69% wartości tej zmiennej i są one w 59,72% współzależne z brakami w zmiennej firma. Wobec tego, zaleca się zastosowanie prostej imputacji tych wartości średnią lub medianą wartości tej zmiennej, bądź uzupełnianie jej poprzez wielokrotną imputację, np. przy pomocy pakietu "mice".
+Z uwagi jednak na charakter i specyfikę wartości zmiennej agent_rezerwacji, tj. ID agencji podróży, która dokonała rezerwacji, zasadnym uznano usunięcie tej zmiennej z dalszej analicy.
+
+- zmienna **firma**
+Braki w zmiennej firma, przez wzgląd, iż stanowią ponad 94% wszystkich wartości tej zmiennej, odbierają jej wartość informacyjną, wobec czego należy usunąć tę zmienną
+:::
+
+```{r Usuwanie braków, include=FALSE}
+# Usunięcie wierszy z brakami ze zmiennej liczba_dzieci
+hotel <- hotel %>%
+  filter(!is.na(liczba_dzieci))
+
+# Usuwanie zmiennych agent_rezerwacji oraz firma
+hotel <- hotel %>%
+  select(-agent_rezerwacji, -firma)
+```
+
+```{r Sprawdzenie liczby NA po usunięciu braków, echo=FALSE}
+na_counts2 <- colSums(is.na(hotel))
+
+na_tbl2 <- tibble(
+  Zmienna = names(na_counts2),
+  Liczba_NA = na_counts2)
+
+datatable(
+  na_tbl2,
+  rownames = FALSE,
+  options = list(pageLength = 25, dom = 't'),
+  caption = "Sprawdzenie liczby brakujących wartości po usunięciu ich ze zbioru danych",
+  class = "stripe hover") %>%
+  formatStyle(
+    "Liczba_NA",
+    target = "row",
+    backgroundColor = styleInterval(
+      c(0),
+      c("transparent", "#f8d7da")))
+```
+Liczba obserwacji w zbiorze po usunięciu braków w liczba_dzieci: `r nrow(hotel)`
+
+
+## 3.2. Obsługa obserwacji odstających
 
 ::: {style="text-align: justify;"}
 Wyjaśnij, co zrobiono z obserwacjami odstającymi: • usunięcie, •
