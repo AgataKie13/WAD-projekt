@@ -9,8 +9,6 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(include = FALSE)
-
 # Biblioteki:
 library(readr)
 library(skimr)
@@ -409,14 +407,46 @@ kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
 
 # 5. Wyświetlenie tabel
 ilosciowe_tbl %>%
-  datatable(caption = "Zmienne ilościowe", options = list(paging = FALSE))
+  datatable(caption = "Zmienne ilościowe", rownames = FALSE, options = list(paging = FALSE))
 
 binarne_tbl %>%
-  datatable(caption = "Zmienne binarne", options = list(paging = FALSE))
+  datatable(caption = "Zmienne binarne", rownames = FALSE, options = list(paging = FALSE))
 
 kategoryczne_tbl %>%
-  datatable(caption = "Zmienne kategoryczne", options = list(paging = FALSE))
+  datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE))
 
+
+###### Propozycja obliczania i wyświetlania statystyk "Najczęstszych" dla zmiennych kategorycznych
+categorical_summary <- function(df, vars, top_n = 3) {
+  res <- list()
+
+  for (v in vars) {
+    tbl <- sort(table(df[[v]]), decreasing = TRUE)
+    pct <- round(prop.table(tbl) * 100, 2)
+
+    out <- data.frame(
+      zmienna = v,
+      Top1 = names(tbl)[1],
+      Top1_pct = pct[1],
+      Top2 = ifelse(length(tbl) >= 2, names(tbl)[2], NA),
+      Top2_pct = ifelse(length(tbl) >= 2, pct[2], NA),
+      Top3 = ifelse(length(tbl) >= 3, names(tbl)[3], NA),
+      Top3_pct = ifelse(length(tbl) >= 3, pct[3], NA)
+    )
+
+    res[[v]] <- out
+  }
+
+  bind_rows(res)
+}
+
+kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
+
+kategoryczne_tbl %>%
+  rename_with(~ c("%_Top1","%_Top2","%_Top3"), .cols = c(Top1_pct, Top2_pct, Top3_pct)) %>%
+  datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE)) %>%
+  formatRound(c("%_Top1","%_Top2","%_Top3"), 1)
+######
 ```
 
 ::: {style="text-align: justify;"}
@@ -435,13 +465,16 @@ pierwszych istotnych wniosków.
 
 **Zmienne kategoryczne** opisano pod względem najczęściej występujących
 wartości wraz z ich udziałem w całym zbiorze.
+
+
+TU TRZEBABY DODAĆ JESZCZE FAKTYCZNY OPIS TYCH STATYSTYK (CHYBA)
 :::
 
 ## 2.2. Analiza rozkładów
 
 ### 2.2.1. Histogramy dla zmiennych ilościowych w postaci logarytmicznej
 
-```{r histogramy ilościowe log}
+```{r histogramy ilościowe log, echo=FALSE}
 logarytm <- c("wcześniejsze_rezerwacje_nieodwołane",
               "liczba_dzieci",
               "liczba_niemowląt",
@@ -455,7 +488,7 @@ for (var in logarytm) {
   binwidth <- max(1, range_var / 30)
   
   p <- ggplot(hotel, aes(x = .data[[var]])) +
-    geom_histogram(aes(y = ..count.. + 1),  # dodajemy 1, żeby log(0) nie było
+    geom_histogram(aes(y = after_stat(count) + 1),  # dodajemy 1, żeby log(0) nie było
                    fill = "#21908d", color = "white", binwidth = binwidth) +
     scale_y_log10() +
     labs(x = var,
@@ -492,7 +525,7 @@ wartościach.
 
 ### 2.2.2. Histogramy dla pozostałych zmiennych ilościowych
 
-```{r histogramy ilościowe}
+```{r histogramy ilościowe, echo=FALSE}
 iloscowe <- c("liczba_specjalnych_próśb",
               "liczba_nocy_weekendowych",
               "liczba_nocy_tygodniowych",
@@ -537,7 +570,7 @@ dalszej modelowej analizie.
 
 ### 2.2.3. Histogramy dla zmiennych kategorycznych
 
-```{r histogramy kategoryczne}
+```{r histogramy kategoryczne, echo=FALSE}
 for (var in c(zmienne_kategoryczne)) {
   if (!var %in% names(hotel)) next
   x <- hotel[[var]]
@@ -773,10 +806,7 @@ datatable(
   rownames = FALSE,
   class = "stripe hover compact",
   options = list(pageLength = 5, dom = 't', paging = FALSE),
-  caption = htmltools::tags$caption(
-    style = "caption-side: upper;",
-    "Procent braków danych (NA) dla wskazanych zmiennych")
-  ) %>%
+  caption = "Procent braków danych (NA) dla wskazanych zmiennych") %>%
   formatRound("Procent_NA", 2)
 ```
 
