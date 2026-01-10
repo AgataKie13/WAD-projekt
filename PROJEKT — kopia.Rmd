@@ -802,6 +802,20 @@ ilościowych.
 ```{r boxplot}
 df_ilosciowe <- hotel %>% select(all_of(zmienne_ilosciowe))
 boxplot(df_ilosciowe, main = "Analiza odchyleń", las = 2)
+
+##### PROPOZYCJA DLA WIZUALIZACJI WSTĘPNEJ (ZE STANDARYZACJĄ)
+hotel %>%
+  select(all_of(zmienne_ilosciowe)) %>%
+  scale() %>%
+  as.data.frame() %>%
+  pivot_longer(
+    everything(),
+    names_to = "zmienna",
+    values_to = "wartość") %>%
+  ggplot(aes(x = zmienna, y = wartość)) +
+  geom_boxplot() +
+  coord_flip() +
+  labs(title = "Analiza odchyleń (standaryzacja Z-score)")
 ```
 
 ::: {style="text-align: justify;"}
@@ -932,7 +946,7 @@ a następnie ponowną kalibrację modelu na oczyszczonym zbiorze danych.
 Opisz, jak postępowałeś z brakami danych: • usuwanie obserwacji, •
 uzupełnianie braków danych Uzasadnij wybrane podejście.
 
-```{r obsługa NA}
+```{r obsługa NA, message=FALSE, warning=FALSE}
 hotel_miss <- hotel %>% select(liczba_dzieci, firma, agent_rezerwacji)
 gg_miss_upset(hotel_miss)
 ```
