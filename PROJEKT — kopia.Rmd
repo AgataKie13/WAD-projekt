@@ -109,8 +109,8 @@ czynniki stymulujące, jak i hamujące rezerwacje.
 
 **Struktura zbioru:**
 
--   liczba obserwacji: 119 390
--   liczba zmiennych: 32
+-   liczba obserwacji: `r nrow(hotel)`
+-   liczba zmiennych: `r ncol(hotel)`
 
 ***Zmienna objaśniana:***
 
@@ -121,7 +121,7 @@ czynniki stymulujące, jak i hamujące rezerwacje.
 *Stymulanty* - ich wzrost zmniejsza prawdopodobieństwo anulowania
 pobytu:
 
-1.  previous_bookings_not_canceled → lojalność klienta,,
+1.  previous_bookings_not_canceled → lojalność klienta,
 2.  is_repeated_guest → lojalność klienta,
 3.  total_of_special_requests → większe zaangażowanie klienta,
 4.  stays_in_weekend_nights → dłuższy pobyt → mniejsza szansa
@@ -427,11 +427,11 @@ categorical_summary <- function(df, vars, top_n = 3) {
     out <- data.frame(
       zmienna = v,
       Top1 = names(tbl)[1],
-      Top1_pct = pct[1],
+      Top1_pct = paste0(round(pct[1], 1), "%"),
       Top2 = ifelse(length(tbl) >= 2, names(tbl)[2], NA),
-      Top2_pct = ifelse(length(tbl) >= 2, pct[2], NA),
+      Top2_pct = ifelse(length(tbl) >= 2, paste0(round(pct[2], 1), "%"), NA),
       Top3 = ifelse(length(tbl) >= 3, names(tbl)[3], NA),
-      Top3_pct = ifelse(length(tbl) >= 3, pct[3], NA)
+      Top3_pct = ifelse(length(tbl) >= 3, paste0(round(pct[3], 1), "%"), NA)
     )
 
     res[[v]] <- out
@@ -444,8 +444,7 @@ kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
 
 kategoryczne_tbl %>%
   rename_with(~ c("%_Top1","%_Top2","%_Top3"), .cols = c(Top1_pct, Top2_pct, Top3_pct)) %>%
-  datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE)) %>%
-  formatRound(c("%_Top1","%_Top2","%_Top3"), 1)
+  datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE))
 ######
 ```
 
@@ -808,9 +807,10 @@ datatable(
 ```
 
 ::: {style="text-align: justify;"}
-Braki danych występują w trzech zmiennych: - *liczba_dzieci* - mniej niż
-1% braków, - *firma* - prawie 100% braków, - *agent_rezerwacji* -
-niecałe 14% braków.
+Braki danych występują w trzech zmiennych: 
+- *liczba_dzieci* - mniej niż 1% braków, 
+- *firma* - prawie 100% braków, 
+- *agent_rezerwacji* - niecałe 14% braków.
 
 W dalszej części pracy zostanie omówione podejście do ich uzupełnienia
 oraz odpowiednia „obróbka” braków danych, uwzględniająca charakter
@@ -826,7 +826,7 @@ ilościowych.
 
 ### 2.5.1 Wykresy pudełkowe
 
-```{r boxplot}
+```{r boxplot, echo=FALSE}
 df_ilosciowe <- hotel %>% select(all_of(zmienne_ilosciowe))
 boxplot(df_ilosciowe, main = "Analiza odchyleń", las = 2)
 
@@ -854,7 +854,7 @@ kwantyl-kwantyl.
 
 ### 2.5.2. Wykresy kwantyl-kwantyl z określeniem skośności i kurtozy
 
-```{r qq}
+```{r kwanty-kwantyl, echo=FALSE}
 wrap_title <- function(title, width = 30) {
   paste(strwrap(title, width = width), collapse = "\n")
 }
@@ -873,7 +873,7 @@ for (i in seq(1, length(num_vars), by = 2)) {
       x <- na.omit(df_ilosciowe[[idx]])
       var_name <- num_vars[idx]
       
-      qqnorm(x, pch = 1, frame = FALSE, main = wrap_title(paste("QQ plot:", var_name)))
+      qqnorm(x, pch = 1, frame = FALSE, cex = 0.6, main = wrap_title(paste("QQ plot:", var_name)))
       qqline(x, col = "steelblue", lwd = 2)
 
             skew_values[idx] <- signif(skewness(x), 3)
@@ -884,7 +884,9 @@ for (i in seq(1, length(num_vars), by = 2)) {
     }
   }
 }
+```
 
+```{r Interpretacja wykresów kwantyl-kwantyl, echo=FALSE}
 interpretacja <- c(
   "Skrajnie dodatnio skośny rozkład z bardzo ciężkim ogonem, wskazujący na pojedyncze wartości ekstremalne.",
   "Lekko dodatnio skośny rozkład, z niewielkim wpływem outlierów. Rozkład umiarkowanie spiczasty.",
@@ -901,7 +903,6 @@ interpretacja <- c(
   "Skrajnie dodatnia skośność i spiczastość, obecność bardzo drogich rezerwacji wypaczających średnią."
 )
 
-
 tabela_interp <- data.frame(
   Zmienna = num_vars,
   Skewness = skew_values,
@@ -909,10 +910,13 @@ tabela_interp <- data.frame(
   Interpretacja = interpretacja,
   stringsAsFactors = FALSE
 )
+
 datatable(tabela_interp,
+          rownames = FALSE,
           caption = "Analiza skośności i kurtozy zmiennych ilościowych",
           options = list(paging = FALSE))
 ```
+
 ::: {style="text-align: justify;"}
 Analiza rozkładów zmiennych ilościowych przy użyciu boxplotów, a także
 wartości *skośności* (skewness) i *kurtozy* (kurtosis) pozwoliła
@@ -930,7 +934,7 @@ W kolejnym kroku przeprowadzono wielowymiarową analizę odchyleń z
 wykorzystaniem relacji między zmienną objaśnianą *odwołanie rezerwacji*
 a zmiennymi objaśniającymi.
 :::
-```{r wielowymiarowa ao}
+```{r wielowymiarowa ao, echo=FALSE}
 layout(matrix(c(1, 2), nrow = TRUE, byrow = 2), heights = c(4, 1, 1))
 
 for (var in zmienne_ilosciowe) {
@@ -941,9 +945,10 @@ for (var in zmienne_ilosciowe) {
   fit <- lm(f, data = hotel)
   
   # Wykres diagnostyczny Cooka
-  plot(fit, which = 4, main = paste("Odwołanie rezerwacji ~\n", var))
+  plot(fit, which = 4,  cex = 0.6, main = paste("Odwołanie rezerwacji ~\n", var))
 }
 ```
+
 ::: {style="text-align: justify;"}
 Analiza odległości Cooka dla poszczególnych zmiennych objaśniających
 wykazała zróżnicowany stopień wpływu obserwacji nietypowych na
@@ -974,10 +979,11 @@ a następnie ponowną kalibrację modelu na oczyszczonym zbiorze danych.
 
 Poniżej przeprowdzono dokładną analizę braków danych w zmiennych liczba_dzieci, agent_rezerwacji oraz firma, mającą na celu wskazanie dalszego postępowania.
 
-```{r obsługa NA}
+```{r obsługa NA, echo=FALSE}
 hotel_miss <- hotel %>% select(liczba_dzieci, firma, agent_rezerwacji)
 gg_miss_upset(hotel_miss)
 ```
+
 ::: {style="text-align: justify;"}
 W celu dokładniejszej analizy utworzono wykres UpSet, który prezentuje współwystępowanie braków między zmiennymi. Wynika z niego, że:
 - dla zmiennej liczba_dzieci wszystkie 4 braki występują współzależnie: 2 braki z wartościami NA w zmiennej firma oraz 2 braki z brakami we wszystkich dwóch pozostałych analizowanych zmiennych;
@@ -1022,13 +1028,9 @@ Braki w zmiennej firma, przez wzgląd, iż stanowią ponad 94% wszystkich warto�
 :::
 
 ```{r Usuwanie braków, include=FALSE}
-# Usunięcie wierszy z brakami ze zmiennej liczba_dzieci
-hotel <- hotel %>%
-  filter(!is.na(liczba_dzieci))
-
-# Usuwanie zmiennych agent_rezerwacji oraz firma
-hotel <- hotel %>%
-  select(-agent_rezerwacji, -firma)
+hotel_noNA <- hotel %>%
+  filter(!is.na(liczba_dzieci)) %>% # Usunięcie wierszy z brakami ze zmiennej liczba_dzieci
+  select(-agent_rezerwacji, -firma) # Usuwanie zmiennych agent_rezerwacji oraz firma
 ```
 
 ```{r Sprawdzenie liczby NA po usunięciu braków, echo=FALSE}
@@ -1051,7 +1053,9 @@ datatable(
       c(0),
       c("transparent", "#f8d7da")))
 ```
-Liczba obserwacji w zbiorze po usunięciu braków w liczba_dzieci: `r nrow(hotel)`
+
+Liczba obserwacji w zbiorze po usunięciu braków w zmiennej liczba_dzieci: `r nrow(hotel_noNA)`
+Liczba zmiennych w zbiorze po usunięciu zmiennej agent_rezerwacji oraz firma: `r ncol(hotel_noNA)`
 
 
 ## 3.2. Obsługa obserwacji odstających
@@ -1064,19 +1068,78 @@ ze względu na istotność dla problemu
 !na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
 :::
 
-```{r ??}
-winsorize_iqr <- function(x) {
+```{r Przekształacanie wartości odstających, include=FALSE}
+# Usunięcie obserwacji wpływowych (na podstawie statystyki Cooka - obserwacje przekraczające próg 4/n)
+cook <- cooks.distance(fit)
+n <- nrow(hotel_noNA)
+prog <- 4 / n
+
+hotel_clean <- hotel_noNA[cook < prog, ]
+
+
+# Winsoryzacja wartości odstających w zmiennych o bardzo silnej skośności
+winsorize <- function(x) {
   Q1 <- quantile(x, 0.25, na.rm = TRUE)
   Q3 <- quantile(x, 0.75, na.rm = TRUE)
   IQR <- Q3 - Q1
   pmin(pmax(x, Q1 - 1.5 * IQR), Q3 + 1.5 * IQR)
 }
 
-wina_clean <- wina
-num_vars <- setdiff(names(wina)[sapply(wina, is.numeric)], "jakosc")
+## wektor nazw zmiennych o dużej skośności
+skewed_vars <- num_vars[abs(skew_values) > 1]
 
-wina_clean[num_vars] <- lapply(wina_clean[num_vars], winsorize_iqr)
+## dopasowanie nazw zmiennych do zbioru hotel_noNA
+skewed_vars <- skewed_vars[skewed_vars %in% names(hotel_noNA)]
 
+## winsoryzacja
+hotel_clean <- hotel_clean %>%
+  mutate(across(all_of(skewed_vars), winsorize))
+```
+
+```{r Sprawdzenie efektu przed i po usunięciu wartości odstających, echo=FALSE}
+# liczba wierszy "przed"
+n_before <- nrow(hotel_noNA)
+
+# liczba wierszy "po"
+n_after <- nrow(hotel_clean)
+
+# liczba usuniętych obserwacji
+removed <- n_before - n_after
+```
+
+Usunięto `r removed` obserwacji (`r round(removed/n_before*100, 2)`%) o najwyższym wpływie (wg odległości Cooka).
+
+```{r Sprawdzenie efektu po winsoryzacji, echo=FALSE}
+
+for (var in skewed_vars) {
+  x <- hotel_noNA[[var]]
+  x_w <- winsorize(x)
+  
+  # Boxplot Przed
+  p1 <- ggplot(data.frame(Wartosc = x), aes(x = "", y = Wartosc)) +
+    geom_boxplot(fill = "lightblue") +
+    labs(title = "Przed") + 
+    theme_minimal(base_size = 10) +
+    theme(
+      axis.title = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank())
+  
+  # Boxplot Po
+  p2 <- ggplot(data.frame(Wartosc = x_w), aes(x = "", y = Wartosc)) +
+    geom_boxplot(fill = "salmon") +
+    labs(title = "Po") + 
+    theme_minimal(base_size = 10) +
+    theme(
+      axis.title = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank())
+  
+  combined <- (p1 | p2) + 
+    plot_annotation(title = var)
+  
+  print(combined)
+}
 ```
 
 ::: {style="text-align: justify;"}
@@ -1093,6 +1156,13 @@ ograniczyć wpływ obserwacji ekstremalnych bez usuwania danych.
 assigned_room_type**
 
 ## 3.3. Standaryzacja i normalizacja
+
+Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień)
+
+```{r standaryzacja z-score, include=FALSE}
+hotel_std <- as.data.frame(scale(hotel_noNA))
+```
+
 
 # 4. ZASTOSOWANIE METOD WIELOWYMIAROWYCH
 
