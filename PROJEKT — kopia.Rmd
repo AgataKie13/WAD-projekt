@@ -109,8 +109,8 @@ czynniki stymulujące, jak i hamujące rezerwacje.
 
 **Struktura zbioru:**
 
--   liczba obserwacji: `r nrow(hotel)`
--   liczba zmiennych: `r ncol(hotel)`
+-   liczba obserwacji: 119 390
+-   liczba zmiennych: 36
 
 ***Zmienna objaśniana:***
 
@@ -216,8 +216,7 @@ hotel <- hotel %>%
   "imię_i_nazwisko" = "name",
   "adres_email" = "email",
   "numer_telefonu" = "phone.number",
-  "numer_karty_kredytowej" = "credit_card"
-)
+  "numer_karty_kredytowej" = "credit_card")
 
 # 3. Ustalenie wpływu zmiennych objaśniających na zmienną objaśnianą
 stymulanty <- c(
@@ -229,15 +228,15 @@ stymulanty <- c(
   "liczba_dorosłych",
   "liczba_dzieci",
   "liczba_niemowląt",
-  "wymagane_miejsca_parkingowe"
-)
+  "wymagane_miejsca_parkingowe")
+
 destymulanty <- c(
   "czas_wyprzedzenia_rezerwacji",
   "wcześniejsze_odwołania",
   "liczba_zmian_rezerwacji",
   "liczba_dni_na_liście_oczekujących",
-  "średnia_cena_za_noc"
-)
+  "średnia_cena_za_noc")
+
 nominanty <- c(
   "miesiąc_przyjazdu",
   "numer_tygodnia_przyjazdu",
@@ -249,8 +248,8 @@ nominanty <- c(
   "rodzaj_zarezerwowanego_pokoju",
   "rodzaj_przydzielonego_pokoju",
   "rodzaj_depozytu",
-  "typ_klienta"
-)
+  "typ_klienta")
+
 inne <- c(
   "rok_przyjazdu",
   "dzień_przyjazdu_w_miesiącu",
@@ -261,8 +260,7 @@ inne <- c(
   "imię_i_nazwisko",
   "adres_email",
   "numer_telefonu",
-  "numer_karty_kredytowej"
-)
+  "numer_karty_kredytowej")
 
 # 4. Tabela podsumowująca
 metadata <- tibble(
@@ -273,16 +271,13 @@ metadata <- tibble(
     names(hotel) %in% destymulanty ~ "destymulanta",
     names(hotel) %in% nominanty ~ "nominanta",
     names(hotel) %in% inne ~ "inne",
-    TRUE ~ "zmienna objaśniana"
-  )
-) %>%
+    TRUE ~ "zmienna objaśniana")) %>%
   mutate(kolejnosc = case_when(
     stymulanta_destymulanta == "zmienna objaśniana" ~ 1,
     stymulanta_destymulanta == "stymulanta" ~ 2,
     stymulanta_destymulanta == "destymulanta" ~ 3,
     stymulanta_destymulanta == "nominanta" ~ 4,
-    TRUE ~ 5
-  )) %>%
+    TRUE ~ 5)) %>%
   arrange(kolejnosc, zmienna) %>%
   select(-kolejnosc)
 
@@ -290,15 +285,12 @@ metadata %>%
   datatable(
     rownames = FALSE,
     options = list(pageLength = 15),
-    class = "stripe hover"
-  ) %>%
+    class = "stripe hover") %>%
   formatStyle(
     "stymulanta_destymulanta",
     backgroundColor = styleEqual(
       c("zmienna objaśniana", "stymulanta", "destymulanta", "nominanta", "inne"),
-      c("#d1e7dd", "#e7f1ff", "#f8d7da", "#fff3cd", "#e2e3e5")
-    )
-  )
+      c("#d1e7dd", "#e7f1ff", "#f8d7da", "#fff3cd", "#e2e3e5")))
 ```
 
 ## 1.4. Identyfikacja zmiennych binarnych
@@ -310,12 +302,15 @@ is_binary <- function(x) {
 
 binarne <- sapply(hotel, is_binary)
 
-cat("Zmienne binarne: ")
-cat(paste(names(binarne[binarne]), collapse = ", "))
+data.frame(
+  check.names = FALSE,
+  "Zmienne binarne:" = paste(names(binarne[binarne]), collapse = ", "),
+  stringsAsFactors = FALSE) %>%
+  datatable(rowname = FALSE, options = list(paging = FALSE, dom = 't'))
 ```
 
 ::: {style="text-align: justify;"}
-W zbiorze pznajdują się dwie zmienne binarne:mzmienna objaśniana -
+W zbiorze pznajdują się dwie zmienne binarne: zmienna objaśniana -
 *odwołanie_rezerwacji* oraz zmienna objaśniająca *powracający_gość*.
 :::
 
@@ -444,17 +439,20 @@ kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
 
 kategoryczne_tbl %>%
   rename_with(~ c("%_Top1","%_Top2","%_Top3"), .cols = c(Top1_pct, Top2_pct, Top3_pct)) %>%
-  datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE))
+  datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE, columnDefs = list(list(className = 'dt-center', targets = 1:6))))
+        
 ######
 ```
 
 ::: {style="text-align: justify;"}
 Przeprowadzono analizę statystyczną zmiennych ilościowych, binarnych
-oraz kategorycznych. **Zmienne ilościowe** opisano za pomocą
-następujących statystyk: wartość minimalna i maksymalna, średnia,
-odchylenie standardowe oraz kwantyle 1, 2 (mediana) i 3. Niepokojąca
-jest ujemna wartość *średniej ceny za noc*, którą poddano dodatkowej
-analizie w kolejnych etapach przetwarzania danych.
+oraz kategorycznych. 
+
+**Zmienne ilościowe** opisano za pomocą następujących statystyk: 
+wartość minimalna i maksymalna, średnia, odchylenie standardowe oraz
+kwantyle 1, 2 (mediana) i 3. Niepokojąca jest ujemna wartość 
+*średniej ceny za noc*, którą poddano dodatkowej analizie w kolejnych 
+etapach przetwarzania danych.
 
 W zbiorze znajdują się również dwie **zmienne binarne**: zmienna
 objaśniana *odwołanie_rezerwacji* oraz zmienna objaśniająca
@@ -473,7 +471,7 @@ TU TRZEBABY DODAĆ JESZCZE FAKTYCZNY OPIS TYCH STATYSTYK (CHYBA)
 
 ### 2.2.1. Histogramy dla zmiennych ilościowych w postaci logarytmicznej
 
-```{r histogramy ilościowe log, echo=FALSE}
+```{r histogramy ilościowe log, echo=FALSE, message=FALSE, warning=FALSE}
 logarytm <- c("wcześniejsze_rezerwacje_nieodwołane",
               "liczba_dzieci",
               "liczba_niemowląt",
@@ -504,15 +502,16 @@ Histogramy zmiennych ilościowych zaprezentowano z wykorzystaniem
 logarytmicznej osi OY, co pozwoliło odsłonić strukturę rozkładów
 niewidoczną przy klasycznej skali. Wynika to z faktu, że we wszystkich
 przypadkach zdecydowanie dominuje wartość „0”, skutecznie maskująca
-zróżnicowanie pozostałych obserwacji. Rozkłady zmiennych *liczba
-dzieci*, *liczba niemowląt* oraz *wymagane miejsca parkingowe*
+zróżnicowanie pozostałych obserwacji. 
+
+Rozkłady zmiennych *liczba_dzieci*, *liczba_niemowląt* oraz *wymagane_miejsca_parkingowe*
 charakteryzują się wyraźnym skupieniem obserwacji w dolnym zakresie oraz
 obecnością wartości skrajnych (np. 10 dzieci w jednej obserwacji), które
 zostaną odpowiednio przekształcone w dalszej części analizy. Z kolei
-zmienne *wcześniejsze rezerwacje nieodwołane*, *liczba zmian rezerwacji*
-oraz *liczba dni na liście oczekujących* wykazują mniejsze
+zmienne *wcześniejsze_rezerwacje nieodwołane*, *liczba_zmian_rezerwacji*
+oraz *liczba_dni_na_liście_oczekujących* wykazują mniejsze
 zróżnicowanie - odchylenia od wartości centralnych są ograniczone, a
-rozkłady pozostają bardziej zwarte. Zmienna *wcześniejsze odwołania*
+rozkłady pozostają bardziej zwarte. Zmienna *wcześniejsze_odwołania*
 charakteryzuje się nieregularnym, „poszarpanym” przebiegiem, co utrudnia
 jednoznaczną identyfikację jej rozkładu. Mimo to, podobnie jak w
 przypadku pozostałych analizowanych zmiennych, największe zagęszczenie
@@ -755,11 +754,61 @@ cat("r =", round(cor_test_results2$estimate, 3), "\n")
 cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
 ```
 
+1. Test istotności korelacji zmiennych *liczba_nocy_weekendowych* oraz *liczba_nocy_tygodniowych*:
+```{r testy istotności korelacji 1, include=FALSE}
+cor_test_results2 <- cor.test(hotel$liczba_nocy_weekendowych, hotel$liczba_nocy_tygodniowych)
+```
+r = `r round(cor_test_results2$estimate, 3)`
+p-value = `r round(cor_test_results2$p.value, 5)`
+
+2. Test istotności korelacji zmiennych *liczba_specjalnych_próśb* oraz *odwołanie_rezerwacji*:
+```{r testy istotności korelacji 2, include=FALSE}
+cor_test_results2 <- cor.test(hotel$liczba_specjalnych_próśb, hotel$odwołanie_rezerwacji)
+```
+r = `r round(cor_test_results2$estimate, 3)`
+p-value = `r round(cor_test_results2$p.value, 5)`
+
+3. Test istotności korelacji zmiennych *wymagane_miejsca_parkingowe* oraz *odwołanie_rezerwacji*:
+```{r testy istotności korelacji 3, include=FALSE}
+cor_test_results2 <- cor.test(hotel$wymagane_miejsca_parkingowe, hotel$odwołanie_rezerwacji)
+```
+r = `r round(cor_test_results2$estimate, 3)`
+p-value = `r round(cor_test_results2$p.value, 5)`
+
+4. Test istotności korelacji zmiennych *czas_wyprzedzenia_rezerwacji* oraz *odwołanie_rezerwacji*:
+```{r testy istotności korelacji 4, include=FALSE}
+cor_test_results2 <- cor.test(hotel$czas_wyprzedzenia_rezerwacji, hotel$odwołanie_rezerwacji)
+```
+r = `r round(cor_test_results2$estimate, 3)`
+p-value = `r round(cor_test_results2$p.value, 5)`
+
+5. Test istotności korelacji zmiennych *wcześniejsze_odwołania* oraz *odwołanie_rezerwacji*:
+```{r testy istotności korelacji 5, include=FALSE}
+cor_test_results2 <- cor.test(hotel$wcześniejsze_odwołania, hotel$odwołanie_rezerwacji)
+```
+r = `r round(cor_test_results2$estimate, 3)`
+p-value = `r round(cor_test_results2$p.value, 5)`
+
+6. Test istotności korelacji zmiennych *liczba_zmian_rezerwacji* oraz *odwołanie_rezerwacji*:
+```{r testy istotności korelacji 6, include=FALSE}
+cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_rezerwacji)
+```
+r = `r round(cor_test_results2$estimate, 3)`
+p-value = `r round(cor_test_results2$p.value, 5)`
+
+7. Test istotności korelacji zmiennych *powracający_gość* oraz *odwołanie_rezerwacji*:
+```{r testy istotności korelacji 7, include=FALSE}
+cor_test_results2 <- cor.test(hotel$powracający_gość, hotel$odwołanie_rezerwacji)
+```
+r = `r round(cor_test_results2$estimate, 3)`
+p-value = `r round(cor_test_results2$p.value, 5)`
+
+
 ::: {style="text-align: justify;"}
 Analiza korelacji wykazała, że wszystkie badane zależności są istotne
 statystycznie (p \< 0,05), jednak w większości przypadków mają one słabą
 siłę. Najsilniejszą, umiarkowaną dodatnią korelację zaobserwowano
-pomiędzy liczbą nocy weekendowych i tygodniowych (r = 0,499). Pozostałe
+pomiędzy *liczbą nocy weekendowych* i *tygodniowych* (r = 0,499). Pozostałe
 zmienne wykazują jedynie słabe lub bardzo słabe związki z odwołaniem
 rezerwacji, co oznacza, że choć zależności te są statystycznie istotne,
 ich znaczenie praktyczne jest ograniczone.
@@ -787,6 +836,17 @@ datatable(
       c("transparent", "#f8d7da")))
 ```
 
+::: {style="text-align: justify;"}
+Analiza braków wykazała, że występują one w trzech zmiennych: 
+
+- *liczba_dzieci* (4 braki), 
+
+- *firma* (112 593 braków), 
+
+- *agent_rezerwacji* (16 340 braków).
+
+:::
+
 ```{r procent NA, echo=FALSE}
 na_pct <- tibble(
   Zmienna = c("liczba_dzieci", "firma", "agent_rezerwacji"),
@@ -807,10 +867,14 @@ datatable(
 ```
 
 ::: {style="text-align: justify;"}
-Braki danych występują w trzech zmiennych: 
-- *liczba_dzieci* - mniej niż 1% braków, 
-- *firma* - prawie 100% braków, 
-- *agent_rezerwacji* - niecałe 14% braków.
+Wartości NA stanowią:
+
+- mniej niż 1% obserwacji zmiennej *liczba_dzieci*, 
+
+- blisko 100% wartości zmiennej *firma*, 
+
+- niecałe 14% obserwacji zmiennej *agent_rezerwacji*.
+
 
 W dalszej części pracy zostanie omówione podejście do ich uzupełnienia
 oraz odpowiednia „obróbka” braków danych, uwzględniająca charakter
@@ -826,7 +890,7 @@ ilościowych.
 
 ### 2.5.1 Wykresy pudełkowe
 
-```{r boxplot, echo=FALSE}
+```{r boxplot, echo=FALSE, message=FALSE, warning=FALSE}
 df_ilosciowe <- hotel %>% select(all_of(zmienne_ilosciowe))
 boxplot(df_ilosciowe, main = "Analiza odchyleń", las = 2)
 
@@ -854,7 +918,7 @@ kwantyl-kwantyl.
 
 ### 2.5.2. Wykresy kwantyl-kwantyl z określeniem skośności i kurtozy
 
-```{r kwanty-kwantyl, echo=FALSE}
+```{r Q-Q, echo=FALSE}
 wrap_title <- function(title, width = 30) {
   paste(strwrap(title, width = width), collapse = "\n")
 }
@@ -873,14 +937,14 @@ for (i in seq(1, length(num_vars), by = 2)) {
       x <- na.omit(df_ilosciowe[[idx]])
       var_name <- num_vars[idx]
       
-      qqnorm(x, pch = 1, frame = FALSE, cex = 0.6, main = wrap_title(paste("QQ plot:", var_name)))
+      qqnorm(x, pch = 1, frame = FALSE, cex.main = 1, cex.lab = 0.8, cex.axis = 0.8, main = wrap_title(paste("QQ plot:", var_name)))
       qqline(x, col = "steelblue", lwd = 2)
 
             skew_values[idx] <- signif(skewness(x), 3)
       kurt_values[idx] <- signif(kurtosis(x), 3)
       
-      mtext(paste0("skew = ", skew_values[idx]), side = 1, line = 5)
-      mtext(paste0("kurt = ", kurt_values[idx]), side = 1, line = 6)
+      mtext(paste0("skew = ", skew_values[idx]), side = 1, line = 5, cex.main = 0.9)
+      mtext(paste0("kurt = ", kurt_values[idx]), side = 1, line = 6, cex.main = 0.9)
     }
   }
 }
@@ -914,7 +978,7 @@ tabela_interp <- data.frame(
 datatable(tabela_interp,
           rownames = FALSE,
           caption = "Analiza skośności i kurtozy zmiennych ilościowych",
-          options = list(paging = FALSE))
+          options = list(paging = FALSE, columnDefs = list(list(className = 'dt-center', targets = 1:2))))
 ```
 
 ::: {style="text-align: justify;"}
@@ -945,7 +1009,7 @@ for (var in zmienne_ilosciowe) {
   fit <- lm(f, data = hotel)
   
   # Wykres diagnostyczny Cooka
-  plot(fit, which = 4,  cex = 0.6, main = paste("Odwołanie rezerwacji ~\n", var))
+  plot(fit, which = 4,  cex = 0.6, cex.main = 1, cex.lab = 0.8, cex.axis = 0.8, main = paste("Odwołanie rezerwacji ~\n", var))
 }
 ```
 
@@ -953,17 +1017,16 @@ for (var in zmienne_ilosciowe) {
 Analiza odległości Cooka dla poszczególnych zmiennych objaśniających
 wykazała zróżnicowany stopień wpływu obserwacji nietypowych na
 stabilność estymowanych parametrów modelu. Szczególną uwagę należy
-zwrócić na zmienne liczba_dorosłych oraz średnia_cena_za_noc, gdzie
+zwrócić na zmienne *liczba_dorosłych* oraz *średnia_cena_za_noc*, gdzie
 zidentyfikowano punkty (m.in. nr 2174 oraz 48515) o ekstremalnie
 wysokich wartościach statystyki $D$, sięgających poziomu 0.8, co
 wskazuje na ich krytyczny wpływ na dopasowanie modelu. Znaczące wartości
 odstające o charakterze punktów wpływowych widoczne są również dla
-zmiennych liczba_niemowląt (obserwacja 46620, $D \approx 0.3$) oraz
-wymagane_miejsca_parkingowe (obserwacja 29046, $D \approx 0.15$).
+zmiennych *liczba_niemowląt* (obserwacja 46620, $D \approx 0.3$) oraz
+*wymagane_miejsca_parkingowe* (obserwacja 29046, $D \approx 0.15$).
 Istotne zakłócenia odnotowano także w przypadku zmiennych
-wcześniejsze_rezerwacje_nieodwołane oraz liczba_zmian_rezerwacji. W
-pozostałych przypadkach, takich jak liczba specjalnych próśb czy czas
-wyprzedzenia rezerwacji, wartości odległości Cooka są rzędu $10^{-3}$
+*wcześniejsze_rezerwacje_nieodwołane* oraz *liczba_zmian_rezerwacji*. W
+pozostałych przypadkach, takich jak *liczba_specjalnych_próśb* czy *czas_wyprzedzenia_rezerwacji*, wartości odległości Cooka są rzędu $10^{-3}$
 lub mniejsze, co sugeruje brak dominujących outlierów zaburzających
 wyniki. W celu zapewnienia wiarygodności prognoz i uniknięcia biasu
 wynikającego z jednostkowych anomalii, rekomenduje się usunięcie
@@ -977,26 +1040,34 @@ a następnie ponowną kalibrację modelu na oczyszczonym zbiorze danych.
 
 ### 3.1.1. Analiza występowania braków danych
 
-Poniżej przeprowdzono dokładną analizę braków danych w zmiennych liczba_dzieci, agent_rezerwacji oraz firma, mającą na celu wskazanie dalszego postępowania.
+Poniżej przeprowdzono dokładną analizę braków danych w zmiennych *liczba_dzieci*, *agent_rezerwacji* oraz *firma*, mającą na celu wskazanie dalszego postępowania.
 
-```{r obsługa NA, echo=FALSE}
+```{r obsługa NA, echo=FALSE, message=FALSE, warning=FALSE}
 hotel_miss <- hotel %>% select(liczba_dzieci, firma, agent_rezerwacji)
 gg_miss_upset(hotel_miss)
 ```
 
 ::: {style="text-align: justify;"}
 W celu dokładniejszej analizy utworzono wykres UpSet, który prezentuje współwystępowanie braków między zmiennymi. Wynika z niego, że:
-- dla zmiennej liczba_dzieci wszystkie 4 braki występują współzależnie: 2 braki z wartościami NA w zmiennej firma oraz 2 braki z brakami we wszystkich dwóch pozostałych analizowanych zmiennych;
-- dla zmiennej agent_rezerwacji ok. 9,8 tys. braków (ok. `r round(9758/16340*100, 2)`%) występuje wspólnie z brakami w zmiennej firma, a 2 braki, jak już ustalono, wraz z brakami w pozostałych zmiennych. Natomiast blisko 6,6 tys. braków (ok. `r round(6580/16340*100, 2)`%) występuje niezależnie;
-- w zmiennej firma, poza wskazanymi zależnościami braków, zdecydowana większość wartości NA (ok. `r round(102831/112593*100, 2)`%) występuje niezależnie.
+
+- dla zmiennej *liczba_dzieci* wszystkie 4 braki występują współzależnie: 2 braki z wartościami NA w zmiennej firma oraz 2 braki z brakami we wszystkich dwóch pozostałych analizowanych zmiennych;
+
+- dla zmiennej *agent_rezerwacji* ok. 9,8 tys. braków (ok. `r round(9758/16340*100, 2)`%) występuje wspólnie z brakami w zmiennej firma, a 2 braki, jak już ustalono, wraz z brakami w pozostałych zmiennych. Natomiast blisko 6,6 tys. braków (ok. `r round(6580/16340*100, 2)`%) występuje niezależnie;
+
+- w zmiennej *firma*, poza wskazanymi zależnościami braków, zdecydowana większość wartości NA (ok. `r round(102831/112593*100, 2)`%) występuje niezależnie.
 :::
+
+
+***Test MCAR***
+
+H0: 
+HA:
 
 ```{r test MCAR, echo=FALSE}
 mcar_test(hotel_miss) %>%
   as.data.frame() %>% 
   mutate(statistic = round(statistic, 3)) %>%
-  datatable(test_df,
-            rownames = FALSE,
+  datatable(rownames = FALSE,
             caption = "Wyniki testu MCAR: Missing Completely At Random",
             options = list(dom = 't', paging = FALSE))
 ```
@@ -1017,14 +1088,17 @@ lub modele uwzględniające ich obecność.
 Na podstawie powyższej analizy wysunięto następujące wnioski:
 
 - zmienna **lista_dzieci**
+
 Wartości NA występujące w tej zmiennej stanowią marginalny odsetek obserwacji (0,003%). Ponadto, współwystępują one z brakami w pozostałych analizowanych pod kądtem braków zmiennych. Zaleca się wobec tego usunięcie rekordów z brakami, bez stosowania imputacji.
 
 - zmienna **agent_rezerwacji**
+
 Brakujące wartości zmiennej agent_rezerwacji stanowią 13,69% wartości tej zmiennej i są one w 59,72% współzależne z brakami w zmiennej firma. Wobec tego, zaleca się zastosowanie prostej imputacji tych wartości średnią lub medianą wartości tej zmiennej, bądź uzupełnianie jej poprzez wielokrotną imputację, np. przy pomocy pakietu "mice".
 Z uwagi jednak na charakter i specyfikę wartości zmiennej agent_rezerwacji, tj. ID agencji podróży, która dokonała rezerwacji, zasadnym uznano usunięcie tej zmiennej z dalszej analicy.
 
 - zmienna **firma**
-Braki w zmiennej firma, przez wzgląd, iż stanowią ponad 94% wszystkich wartości tej zmiennej, odbierają jej wartość informacyjną, wobec czego należy usunąć tę zmienną
+
+Braki w zmiennej firma, przez wzgląd, iż stanowią ponad 94% wszystkich wartości tej zmiennej, odbierają jej wartość informacyjną, wobec czego należy usunąć tę zmienną.
 :::
 
 ```{r Usuwanie braków, include=FALSE}
@@ -1034,7 +1108,7 @@ hotel_noNA <- hotel %>%
 ```
 
 ```{r Sprawdzenie liczby NA po usunięciu braków, echo=FALSE}
-na_counts2 <- colSums(is.na(hotel))
+na_counts2 <- colSums(is.na(hotel_noNA))
 
 na_tbl2 <- tibble(
   Zmienna = names(na_counts2),
@@ -1054,113 +1128,243 @@ datatable(
       c("transparent", "#f8d7da")))
 ```
 
-Liczba obserwacji w zbiorze po usunięciu braków w zmiennej liczba_dzieci: `r nrow(hotel_noNA)`
-Liczba zmiennych w zbiorze po usunięciu zmiennej agent_rezerwacji oraz firma: `r ncol(hotel_noNA)`
+Liczba obserwacji w zbiorze po usunięciu braków w zmiennej *liczba_dzieci*: **`r nrow(hotel_noNA)`**
+
+Liczba zmiennych w zbiorze po usunięciu zmiennej *agent_rezerwacji* oraz *firma*: **`r ncol(hotel_noNA)`**
 
 
 ## 3.2. Obsługa obserwacji odstających
 
 ::: {style="text-align: justify;"}
-Wyjaśnij, co zrobiono z obserwacjami odstającymi: • usunięcie, •
-wyrównanie wartości odstających do określonych progów, • pozostawienie
-ze względu na istotność dla problemu
-
-!na razie kod z czatu - trzeba przejrzeć zajęcia czy czegoś nie było!
+W celu redukcji wartości odtsających zdecydowano się na zastosowanie podejścia mieszanego. Na podstawie analizy boxplotów, miar skośności i kurtozy zidentyfikowano zmienne charakteryzujące się silnymi odchyleniami od symetrii oraz obecnością wartości ekstremalnych. Dodatkowo wykorzystano analizę odległości Cooka, która pozwoliła wskazać obserwacje silnie wpływowe, mogące w istotny sposób zakłócić dalszą analizę głównych składowych oraz analizę skupień, znanych z wysokiej wrażliwości na obserwacje odstające.
 :::
 
-```{r Przekształacanie wartości odstających, include=FALSE}
-# Usunięcie obserwacji wpływowych (na podstawie statystyki Cooka - obserwacje przekraczające próg 4/n)
-cook <- cooks.distance(fit)
+### 3.2.1. Usunięcie wartości skrajnych
+
+```{r Usunięcie wartości skrajnych, include=FALSE}
+# Usunięcie obserwacji wpływowych (wg statystyki Cooka)
+fit2 <- lm(f, data = hotel_noNA)
+cook <- cooks.distance(fit2)
 n <- nrow(hotel_noNA)
 prog <- 4 / n
 
-hotel_clean <- hotel_noNA[cook < prog, ]
+hotel_clean <- hotel_noNA[which(cook < prog), ]
 
 
-# Winsoryzacja wartości odstających w zmiennych o bardzo silnej skośności
-winsorize <- function(x) {
+# Sprawdzenie efektu przed i po usunięciu wartości odstających
+## liczba wierszy "przed"
+n_before <- nrow(hotel_noNA)
+
+## liczba wierszy "po"
+n_after <- nrow(hotel_clean)
+
+## liczba usuniętych obserwacji
+removed <- n_before - n_after
+```
+
+::: {style="text-align: justify;"}
+Aby ograniczyć wpływ obserwacji odstających na wariancję i odległości między obiektami, przed przeprowadzeniem analiz usunięto najbardziej wpływowe obserwacje, wyznaczone na podstawie statystyki Cooka, przyjmując próg $4/n$.
+
+W konsekwencji usunięto `r removed` obserwacji (`r round(removed/n_before*100, 2)`%) o najwyższym wpływie na dopasowanie modelu.
+:::
+
+
+### 3.2.2. Winsoryzacja
+
+::: {style="text-align: justify;"}
+W kolejnym etapie rozważono sposób ograniczenia wpływu wartości odstających w zmiennych ilościowych o wysokiej skośności (skewness > 1). W dostosowywaniu winsonizacji uwzględniono również charakter zmiennych oraz ich potencjalny wpływ na analizę głównych składowych (PCA) oraz analizę skupień.
+:::
+
+```{r Winsoryzacja wartości odstających w zmiennych o silnej skośności, echo=FALSE}
+# Definiowanie funkcji
+## IQR
+winsorize_IQR <- function(x) {
   Q1 <- quantile(x, 0.25, na.rm = TRUE)
   Q3 <- quantile(x, 0.75, na.rm = TRUE)
   IQR <- Q3 - Q1
   pmin(pmax(x, Q1 - 1.5 * IQR), Q3 + 1.5 * IQR)
 }
 
-## wektor nazw zmiennych o dużej skośności
-skewed_vars <- num_vars[abs(skew_values) > 1]
+## Precentyle
+winsorize_p <- function(x) {
+  p_low <- quantile(x, 0.01, na.rm = TRUE)
+  p_high <- quantile(x, 0.99, na.rm = TRUE)
+  pmin(pmax(x, p_low), p_high)
+}
 
-## dopasowanie nazw zmiennych do zbioru hotel_noNA
+
+# Wybór metody winsoryzacji
+## Sprawdzenie najlepszej metody winsoryzacji na zmiennej o najwyższej skośności
+x <- hotel_noNA$średnia_cena_za_noc
+
+### IQR
+x_iqr <- winsorize_IQR(x)
+
+### Percentyle
+p1 <- quantile(x, 0.01)
+p99 <- quantile(x, 0.99)
+x_p <- pmin(pmax(x, p1), p99)
+
+
+# Winsoryzacja
+## Wybór zmiennych o dużej skośności (>1)
+skewed_vars <- num_vars[abs(skew_values) > 2]
+
+## Dopasowanie nazw zmiennych do nazw ze zbioru hotel_noNA
 skewed_vars <- skewed_vars[skewed_vars %in% names(hotel_noNA)]
 
-## winsoryzacja
+## Wyodrębnienie zmiennych ciągłych, o dużym zakresie
+continuous_vars <- c("średnia_cena_za_noc", "liczba_dni_na_liście_oczekujących")
+
+## Sprawdzenie, czy wszystkie continuous_vars są w skewed_vars
+continuous_vars <- continuous_vars[continuous_vars %in% skewed_vars]
+
+## Winsoryzacja zmiennych continuous_vars
 hotel_clean <- hotel_clean %>%
-  mutate(across(all_of(skewed_vars), winsorize))
+  mutate(across(all_of(continuous_vars), winsorize_p))
 ```
 
-```{r Sprawdzenie efektu przed i po usunięciu wartości odstających, echo=FALSE}
-# liczba wierszy "przed"
-n_before <- nrow(hotel_noNA)
+::: {style="text-align: justify;"}
+Dla zmiennych o szerokim zakresie wartości i wyraźnych wartościach skrajnych (takich jak *średnia_cena_za_noc* czy *liczba_dni_na_liście_oczekujących*), które mogłyby silnie wpływać na wariancję i odległości pomiędzy obserwacjami, zastosowano winsoryzację opartą na percentylach 1% i 99%. Wybór tej metody był uzasadniony tym, że reguła IQR prowadziła do modyfikacji większego odsetka danych (ok. `r round(mean(x != x_iqr) * 100, 2)`% w przypadku zmiennej o najwyższej skośności spośród wskazanych - tj. *średnia_cena_za_noc* (skew = 10,5)), co przy tak dużym zbiorze danych mogłoby prowadzić do nadmiernego wygładzenia rozkładów.
 
-# liczba wierszy "po"
-n_after <- nrow(hotel_clean)
+Metoda percentylowa pozwoliła ograniczyć wpływ najbardziej skrajnych obserwacji (ok. `r round(mean(x != x_p) * 100, 2)`% danych dla zmiennej o najwyższym skewness), zachowując jednocześnie strukturę zmienności istotną dla dalszych analiz wielowymiarowych. Pozwoliło to zmniejszyć wpływ ekstremów bez utraty istotnych obserwacji oraz uniknąć nadmierną modyfikację danych, charakterystyczną dla reguły IQR w przypadku rozkładów silnie skośnych.
+:::
 
-# liczba usuniętych obserwacji
-removed <- n_before - n_after
+
+### 3.2.3. Ograniczenie zmiennych "z góry"
+
+```{r obcięcie górnego ogona, echo=FALSE}
+# Wyodrębnienie zmiennych ilościowych, dyskretnych, o niskiej rozpiętości i wysokiej skośności
+count_vars <- c("liczba_niemowląt", "liczba_zmian_rezerwacji", "wcześniejsze_rezerwacje_nieodwołane", "wcześniejsze_odwołania")
+
+# Sprawdzenie, czy wszystkie count_vars są w skewed_vars
+count_vars <- count_vars[count_vars %in% skewed_vars]
+
+# Ograniczenie wybranych zmiennych "z góry" odcinając wartości odstające
+hotel_clean <- hotel_clean %>%
+  mutate(across(
+    all_of(count_vars),
+    ~ {
+      p99 <- quantile(.x, 0.99, na.rm = TRUE)
+      ifelse(.x > p99, p99, .x)
+    }
+  ))
 ```
 
-Usunięto `r removed` obserwacji (`r round(removed/n_before*100, 2)`%) o najwyższym wpływie (wg odległości Cooka).
+::: {style="text-align: justify;"}
+Zmienne takie, jak *liczba_niemowląt*, *liczba_zmian_rezerwacji*, *wcześniejsze_rezerwacje_nieodwołane* i *wcześniejsze_odwołania*, w których zdecydowana większość obserwacji przyjmowała wartość 0, nie zostały poddane klasycznej winsoryzacji percentylowej, ponieważ mogłoby to prowadzić do utraty informacji lub powstania wartości NA. W ich przypadku zastosowano jedynie kontrolowane ograniczenie najwyższych wartości, co pozwoliło zmniejszyć wpływ pojedynczych obserwacji skrajnych na analizę PCA i skupień, bez zmiany interpretacji tych zmiennych.
+:::
 
-```{r Sprawdzenie efektu po winsoryzacji, echo=FALSE}
 
-for (var in skewed_vars) {
-  x <- hotel_noNA[[var]]
-  x_w <- winsorize(x)
+### 3.2.4. Pozostawienie istotnych wartości odstających
+
+:::  {style="text-align: justify;"}
+Pozostałe zmienne o umiarkowanej skośności i niższej statystyce Cooka (*liczba_dzieci*, *liczba_specjalnych_próśb*, *liczba_nocy_weekendowych*, *liczba_nocy_tygodniowych*, *liczba_dorosłych*, *czas_wyprzedzenia_rezerwacji*, *wcześniejsze_odwołania*, *liczba_zmian_rezerwacji*, *wymagane_miejsca_parkingowe*), były poddane jedynie ograniczeniu wynikającemu z ewentualnego przekroczenia progu $4/n$ dla statystyki Cooka ($D$). Przez wzgląd na fakt, że ich wartości i zakres nie stwarzały jednak ryzyka nadmiernego wpływu pojedynczych obserwacji na analizę wielowymiarową, nie zastosowano dla nich innych, celowych modyfikacji mających na celu spłaszczenie bądź ograniczenie zakresu ich wartości. Dzięki temu zachowano maksymalną informacyjność tych zmiennych, jednocześnie minimalizując wpływ ekstremów w najbardziej krytycznych kolumnach.
+:::
+
+### 3.2.5. Podsumowanie wartości zmiennych po pszekształceniach
+
+```{r Sprawdzanie obsługi wartości odstających 1, echo=FALSE}
+# Boxploty zmiennych ilościowych
+vars_changed <- c(continuous_vars, count_vars, "liczba_dorosłych")
+
+for (var in vars_changed) {
+
+  x_before <- hotel_noNA[[var]]
+  x_after  <- hotel_clean[[var]]
   
-  # Boxplot Przed
-  p1 <- ggplot(data.frame(Wartosc = x), aes(x = "", y = Wartosc)) +
+  ## Boxplot "przed" obsługą outlierów
+  p1 <- ggplot(data.frame(Wartosc = x_before), aes(x = "", y = Wartosc)) +
     geom_boxplot(fill = "lightblue") +
     labs(title = "Przed") + 
-    theme_minimal(base_size = 10) +
+    theme_minimal(base_size = 11) +
     theme(
+      plot.title = element_text(hjust = 0.5, size = 10),
       axis.title = element_blank(),
       axis.text.x = element_blank(),
       axis.ticks.x = element_blank())
   
-  # Boxplot Po
-  p2 <- ggplot(data.frame(Wartosc = x_w), aes(x = "", y = Wartosc)) +
+  ## Boxplot "po" obróbce outlierów
+  p2 <- ggplot(data.frame(Wartosc = x_after), aes(x = "", y = Wartosc)) +
     geom_boxplot(fill = "salmon") +
     labs(title = "Po") + 
-    theme_minimal(base_size = 10) +
+    theme_minimal(base_size = 11) +
     theme(
+      plot.title = element_text(hjust = 0.5, size = 10),
       axis.title = element_blank(),
       axis.text.x = element_blank(),
       axis.ticks.x = element_blank())
   
   combined <- (p1 | p2) + 
-    plot_annotation(title = var)
+    plot_annotation(title = var) +
+    plot_layout(widths = c(1,1))
   
   print(combined)
 }
 ```
 
-::: {style="text-align: justify;"}
-Zmienną objaśnianą (jakość wina) pozostawiono bez modyfikacji ze względu
-na jej kluczowe znaczenie dla problemu badawczego. Dla zmiennych
-objaśniających zastosowano wyrównanie wartości odstających do progów
-wyznaczonych na podstawie reguły 1,5·IQR (winsoryzacja), co pozwoliło
-ograniczyć wpływ obserwacji ekstremalnych bez usuwania danych.
-:::
+opis
 
-## 3.2. Tworzenie nowych zmiennych
+```{r Sprawdzanie obsługi wartości odstających 2, echo=FALSE}
+# Tabela podsumowująca - skośność "przed" i "po" usunięciu wartości odstających
+skew_compare <- data.frame(
+  skew_przed = round(
+    sapply(
+      hotel_noNA %>% select(all_of(zmienne_ilosciowe)),
+      skewness,
+      na.rm = TRUE), 2),
+  skew_po = round(
+    sapply(
+      hotel_clean %>% select(all_of(zmienne_ilosciowe)),
+      skewness,
+      na.rm = TRUE), 2)) %>%
+  mutate(poprawa = abs(skew_przed) - abs(skew_po))
+
+skew_compare %>% 
+  rename_with(~ c("poprawa_p.%"), .cols = c(poprawa)) %>% 
+  datatable(
+    options = list(pageLength = 25, dom = 't'),
+    caption = "Sprawdzenie parametru skośności po obsłudze elementów odstających") %>%
+  formatRound("poprawa_p.%", 2)
+```
+
+opis
+
+```{r Sprawdzanie obsługi wartości odstających 3, echo=FALSE}
+# Statystyki "przed" i "po" przekształceniu zmiennych
+ilosciowe_tbl %>%
+  datatable(caption = "Zmienne ilościowe (przed)", rownames = FALSE, options = list(paging = FALSE))
+
+data.frame(
+  zmienna = as.character(zmienne_ilosciowe),
+  min = sapply(hotel_clean[zmienne_ilosciowe], function(x) min(x, na.rm = TRUE)),
+  max = sapply(hotel_clean[zmienne_ilosciowe], function(x) max(x, na.rm = TRUE)),
+  średnia = round(sapply(hotel_clean[zmienne_ilosciowe], function(x) mean(x, na.rm = TRUE)), 2),
+  sd = round(sapply(hotel_clean[zmienne_ilosciowe], function(x) sd(x, na.rm = TRUE)), 2),
+  Q1 = sapply(hotel_clean[zmienne_ilosciowe], function(x) quantile(x, 0.25, na.rm = TRUE)),
+  mediana = sapply(hotel_clean[zmienne_ilosciowe], function(x) median(x, na.rm = TRUE)),
+  Q3 = sapply(hotel_clean[zmienne_ilosciowe], function(x) quantile(x, 0.75, na.rm = TRUE)),
+  row.names = NULL) %>%
+  datatable(caption = "Zmienne ilościowe (po)", rownames = FALSE, options = list(paging = FALSE)) %>%
+  formatStyle('zmienna', target = 'row', backgroundColor = styleEqual(vars_changed, rep('#d1e7dd', length(vars_changed))))
+```
+
+opis
+
+# 4. Obróbka zmiennych
+## 3.1. Tworzenie nowych zmiennych
 
 **Można dodać zmienną pochodną: room_changed = reserved_room_type !=
 assigned_room_type**
 
-## 3.3. Standaryzacja i normalizacja
+## 3.2. Standaryzacja i normalizacja
 
 Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień)
 
 ```{r standaryzacja z-score, include=FALSE}
-hotel_std <- as.data.frame(scale(hotel_noNA))
+hotel_std <- hotel_clean[zmienne_ilosciowe] %>% 
+  scale() %>% 
+  as.data.frame()
 ```
 
 
