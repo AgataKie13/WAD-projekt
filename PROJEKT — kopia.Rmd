@@ -333,8 +333,7 @@ zmienne_ilosciowe <- c(
   "wcześniejsze_odwołania",
   "liczba_zmian_rezerwacji",
   "liczba_dni_na_liście_oczekujących",
-  "średnia_cena_za_noc"
-)
+  "średnia_cena_za_noc")
 
 zmienne_kategoryczne <- c(
   "typ_hotelu",
@@ -349,13 +348,11 @@ zmienne_kategoryczne <- c(
   "numer_tygodnia_przyjazdu",
   "rok_przyjazdu",
   "dzień_przyjazdu_w_miesiącu",
-  "status_rezerwacji"
-)
+  "status_rezerwacji")
 
 zmienne_binarne <- c(
    "odwołanie_rezerwacji",
-   "powracający_gość"  
-)
+   "powracający_gość"  )
 
 # 2. Statystyki opisowe dla zmiennych ilościowych
 ilosciowe_tbl <- data.frame(
@@ -367,8 +364,7 @@ ilosciowe_tbl <- data.frame(
   Q1 = sapply(hotel[zmienne_ilosciowe], function(x) quantile(x, 0.25, na.rm = TRUE)),
   mediana = sapply(hotel[zmienne_ilosciowe], function(x) median(x, na.rm = TRUE)),
   Q3 = sapply(hotel[zmienne_ilosciowe], function(x) quantile(x, 0.75, na.rm = TRUE)),
-  row.names = NULL
-)
+  row.names = NULL)
 
 # 3. Statystyki opisowe dla zmiennych binarnych
 binarne_tbl <- data.frame(
@@ -378,8 +374,7 @@ binarne_tbl <- data.frame(
   średnia = round(sapply(hotel[binarne], function(x) mean(x, na.rm = TRUE)), 2),
   sd = round(sapply(hotel[binarne], function(x) sd(x, na.rm = TRUE)), 2),
   Procent_1 = paste0(round(sapply(hotel[binarne], function(x) mean(x, na.rm = TRUE)*100), 2), "%"),
-  row.names = NULL
-)
+  row.names = NULL)
 
 # 4. Statystyki opisowe dla zmiennych kategorycznych
 categorical_summary <- function(df, vars) {
@@ -426,8 +421,7 @@ categorical_summary <- function(df, vars, top_n = 3) {
       Top2 = ifelse(length(tbl) >= 2, names(tbl)[2], NA),
       Top2_pct = ifelse(length(tbl) >= 2, paste0(round(pct[2], 1), "%"), NA),
       Top3 = ifelse(length(tbl) >= 3, names(tbl)[3], NA),
-      Top3_pct = ifelse(length(tbl) >= 3, paste0(round(pct[3], 1), "%"), NA)
-    )
+      Top3_pct = ifelse(length(tbl) >= 3, paste0(round(pct[3], 1), "%"), NA))
 
     res[[v]] <- out
   }
@@ -528,8 +522,7 @@ iloscowe <- c("liczba_specjalnych_próśb",
               "liczba_nocy_weekendowych",
               "liczba_nocy_tygodniowych",
               "liczba_dorosłych",
-              "czas_wyprzedzenia_rezerwacji"
-)
+              "czas_wyprzedzenia_rezerwacji")
 
 for (var in iloscowe) {
   range_var <- max(hotel[[var]], na.rm = TRUE) - min(hotel[[var]], na.rm = TRUE)
@@ -1305,6 +1298,27 @@ for (var in vars_changed) {
 
 opis
 
+```{r Sprawdzanie obsługi wartości odstających 3, echo=FALSE}
+# Statystyki "przed" i "po" przekształceniu zmiennych
+ilosciowe_tbl %>%
+  datatable(caption = "Zmienne ilościowe (przed)", rownames = FALSE, options = list(paging = FALSE))
+
+data.frame(
+  zmienna = as.character(zmienne_ilosciowe),
+  min = sapply(hotel_clean[zmienne_ilosciowe], function(x) min(x, na.rm = TRUE)),
+  max = sapply(hotel_clean[zmienne_ilosciowe], function(x) max(x, na.rm = TRUE)),
+  średnia = round(sapply(hotel_clean[zmienne_ilosciowe], function(x) mean(x, na.rm = TRUE)), 2),
+  sd = round(sapply(hotel_clean[zmienne_ilosciowe], function(x) sd(x, na.rm = TRUE)), 2),
+  Q1 = sapply(hotel_clean[zmienne_ilosciowe], function(x) quantile(x, 0.25, na.rm = TRUE)),
+  mediana = sapply(hotel_clean[zmienne_ilosciowe], function(x) median(x, na.rm = TRUE)),
+  Q3 = sapply(hotel_clean[zmienne_ilosciowe], function(x) quantile(x, 0.75, na.rm = TRUE)),
+  row.names = NULL) %>%
+  datatable(caption = "Zmienne ilościowe (po)", rownames = FALSE, options = list(paging = FALSE)) %>%
+  formatStyle('zmienna', target = 'row', backgroundColor = styleEqual(vars_changed, rep('#d1e7dd', length(vars_changed))))
+```
+
+opis
+
 ```{r Sprawdzanie obsługi wartości odstających 2, echo=FALSE}
 # Tabela podsumowująca - skośność "przed" i "po" usunięciu wartości odstających
 skew_compare <- data.frame(
@@ -1330,26 +1344,6 @@ skew_compare %>%
 
 opis
 
-```{r Sprawdzanie obsługi wartości odstających 3, echo=FALSE}
-# Statystyki "przed" i "po" przekształceniu zmiennych
-ilosciowe_tbl %>%
-  datatable(caption = "Zmienne ilościowe (przed)", rownames = FALSE, options = list(paging = FALSE))
-
-data.frame(
-  zmienna = as.character(zmienne_ilosciowe),
-  min = sapply(hotel_clean[zmienne_ilosciowe], function(x) min(x, na.rm = TRUE)),
-  max = sapply(hotel_clean[zmienne_ilosciowe], function(x) max(x, na.rm = TRUE)),
-  średnia = round(sapply(hotel_clean[zmienne_ilosciowe], function(x) mean(x, na.rm = TRUE)), 2),
-  sd = round(sapply(hotel_clean[zmienne_ilosciowe], function(x) sd(x, na.rm = TRUE)), 2),
-  Q1 = sapply(hotel_clean[zmienne_ilosciowe], function(x) quantile(x, 0.25, na.rm = TRUE)),
-  mediana = sapply(hotel_clean[zmienne_ilosciowe], function(x) median(x, na.rm = TRUE)),
-  Q3 = sapply(hotel_clean[zmienne_ilosciowe], function(x) quantile(x, 0.75, na.rm = TRUE)),
-  row.names = NULL) %>%
-  datatable(caption = "Zmienne ilościowe (po)", rownames = FALSE, options = list(paging = FALSE)) %>%
-  formatStyle('zmienna', target = 'row', backgroundColor = styleEqual(vars_changed, rep('#d1e7dd', length(vars_changed))))
-```
-
-opis
 
 # 4. Obróbka zmiennych
 ## 3.1. Tworzenie nowych zmiennych
@@ -1361,25 +1355,26 @@ Do zbioru dodano nową zmienną - *zmiana_pokoju*, która sprawdza, czy rodzaj p
 - 0 (rodzaj pokoju pozostał bez zmian)
 
 Połączono także zmienne *liczba_nocy_weekendowych* oraz *liczba_nocy_tygodniowych* w celu utworzenia zmiennej o większej sile informacyjnej - *liczba_nocy*, opisującej łączną długość pobytu.
+
+W podobnym celu powstała zmienna *liczba_osób* charakteryzująca łączną liczbę gości, utworzoną ze zmeinnych: *liczba_dorosłych*, *liczba_dzieci* i *liczba_niemowląt*.
 :::
 
 ```{r dodawanie zmiennych, echo=FALSE}
+# Sprawdzenie czy pokój został zmieniony
 hotel_clean$zmiana_pokoju <-
   ifelse(hotel_clean$rodzaj_zarezerwowanego_pokoju !=
          hotel_clean$rodzaj_przydzielonego_pokoju, 1, 0)
 
+# Łączna liczba zarezerwowanych nocy przez klienta
 hotel_clean$liczba_nocy <-
   hotel_clean$liczba_nocy_weekendowych +
   hotel_clean$liczba_nocy_tygodniowych
 
-# Wielkość grupy
-#hotel_clean$liczba_osób <-
-#  hotel_clean$liczba_dorosłych +
-#  hotel_clean$liczba_dzieci +
-#  hotel_clean$liczba_niemowląt
-
-
-#➡ usuń liczba_dorosłych, liczba_dzieci, liczba_niemowląt
+# Łączna liczba gości
+hotel_clean$liczba_osób <-
+  hotel_clean$liczba_dorosłych +
+  hotel_clean$liczba_dzieci +
+  hotel_clean$liczba_niemowląt
 
 # Sezonowość (lepsza niż miesiąc jako factor)
 #hotel_clean$sezon <- factor(ifelse(
@@ -1389,7 +1384,7 @@ hotel_clean$liczba_nocy <-
 #))
 
 # Tabela statystyk nowych zmiennych
-nowe_zmienne <- c("zmiana_pokoju", "liczba_nocy")
+nowe_zmienne <- c("zmiana_pokoju", "liczba_nocy", "liczba_osób")
 
 data.frame(
   zmienna = as.character(nowe_zmienne),
@@ -1424,6 +1419,8 @@ Usunięte zmienne to:
 
 
 We wcześniejszych etapach analizy usunięto także zmienne *firma* oraz *agent_rezerwacji* ze względu na wsytępowanie wartości NA oraz nie wnoszenie istotnych informacji do analizy (zmienne bez znaczenia liczbowego, zawierające numery ID firm oraz agencji rezerwujących pokoje).
+
+W wyniku dodania nowych zmiennych, które scalają informacje z poszczególnych z nich, wyklucza się ze zbioru zmienne: *rodzaj_zarezerwowanego_pokoju*, *rodzaj_przydzielonego_pokoju*, *liczba_nocy_weekendowych*, *liczba_nocy_tygodniowych*, *liczba_dorosłych*, *liczba_dzieci* i *liczba_niemowląt*.
 :::
 
 ```{r usuwanie zmiennych, include=FALSE}
@@ -1435,7 +1432,15 @@ do_usuniecia <- c(
   "dzień_przyjazdu_w_miesiącu",
   "rok_przyjazdu",
   "data_statusu_rezerwacji",
-  "kraj_pochodzenia")
+  "kraj_pochodzenia",
+  "rodzaj_zarezerwowanego_pokoju",
+  "rodzaj_przydzielonego_pokoju",
+  "rodzaj_przydzielonego_pokoju",
+  "liczba_nocy_weekendowych",
+  "liczba_nocy_tygodniowych",
+  "liczba_dorosłych",
+  "liczba_dzieci",
+  "liczba_niemowląt")
 
 hotel_clean <- hotel_clean %>%
   select(-all_of(do_usuniecia))
@@ -1447,8 +1452,10 @@ hotel_clean <- hotel_clean %>%
 Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień)
 
 ```{r standaryzacja z-score, include=FALSE}
-# Dodanie nowej zmiennej do wektora zmeinne_ilosciowe
-zmienne_ilosciowe <- c(zmienne_ilosciowe, "liczba_nocy")
+# Dodanie nowej zmiennej do wektora zmeinne_ilosciowe i usunięcie pominiętych
+zmienne_ilosciowe <- c(zmienne_ilosciowe, "liczba_nocy") %>%
+  setdiff(c("liczba_nocy_weekendowych", "liczba_nocy_tygodniowych", "liczba_dorosłych",
+  "liczba_dzieci", "liczba_niemowląt"))
 
 # Wyznaczenie zmiennych o zerowym odchyleniu
 zmienne_stale <- sapply(hotel_clean[zmienne_ilosciowe], function(x) sd(x) == 0)
@@ -1465,7 +1472,8 @@ hotel_std <- hotel_clean[zmienne_do_standaryzacji] %>%
 
 # Usunięcie pominiętych zmiennych z wektora zmienne_kategoryczne
 zmienne_kategoryczne <- zmienne_kategoryczne %>%
-  setdiff(c("rok_przyjazdu", "dzień_przyjazdu_w_miesiącu"))
+  setdiff(c("rok_przyjazdu", "dzień_przyjazdu_w_miesiącu", "rodzaj_przydzielonego_pokoju",
+  "rodzaj_zarezerwowanego_pokoju"))
 
 # Dodanie nowej zmiennej do wektora zmeinne_binarne
 zmienne_binarne <- c(zmienne_binarne, "zmiana_pokoju")
