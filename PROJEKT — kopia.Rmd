@@ -1353,18 +1353,129 @@ opis
 
 # 4. Obróbka zmiennych
 ## 3.1. Tworzenie nowych zmiennych
+:::  {style="text-align: justify;"}
+Do zbioru dodano nową zmienną - *zmiana_pokoju*, która sprawdza, czy rodzaj przydzielonego pokoju różnił się od pokoju pierwotnie zarezerwowanego przez klienta. Przyjmuje następujące wartości:
 
-**Można dodać zmienną pochodną: room_changed = reserved_room_type !=
-assigned_room_type**
+- 1 (rodzaj pokoju zarezerwowanego różni się od przydzielonego)
 
-## 3.2. Standaryzacja i normalizacja
+- 0 (rodzaj pokoju pozostał bez zmian)
+
+Połączono także zmienne *liczba_nocy_weekendowych* oraz *liczba_nocy_tygodniowych* w celu utworzenia zmiennej o większej sile informacyjnej - *liczba_nocy*, opisującej łączną długość pobytu.
+:::
+
+```{r dodawanie zmiennych, echo=FALSE}
+hotel_clean$zmiana_pokoju <-
+  ifelse(hotel_clean$rodzaj_zarezerwowanego_pokoju !=
+         hotel_clean$rodzaj_przydzielonego_pokoju, 1, 0)
+
+hotel_clean$liczba_nocy <-
+  hotel_clean$liczba_nocy_weekendowych +
+  hotel_clean$liczba_nocy_tygodniowych
+
+# Wielkość grupy
+#hotel_clean$liczba_osób <-
+#  hotel_clean$liczba_dorosłych +
+#  hotel_clean$liczba_dzieci +
+#  hotel_clean$liczba_niemowląt
+
+
+#➡ usuń liczba_dorosłych, liczba_dzieci, liczba_niemowląt
+
+# Sezonowość (lepsza niż miesiąc jako factor)
+#hotel_clean$sezon <- factor(ifelse(
+#  hotel_clean$miesiąc_przyjazdu %in% c("June","July","August"), "wysoki",
+#  ifelse(hotel_clean$miesiąc_przyjazdu %in% c("December","January","February"),
+#         "niski", "średni")
+#))
+
+# Tabela statystyk nowych zmiennych
+nowe_zmienne <- c("zmiana_pokoju", "liczba_nocy")
+
+data.frame(
+  zmienna = as.character(nowe_zmienne),
+  min = sapply(hotel_clean[nowe_zmienne], function(x) min(x, na.rm = TRUE)),
+  max = sapply(hotel_clean[nowe_zmienne], function(x) max(x, na.rm = TRUE)),
+  średnia = round(sapply(hotel_clean[nowe_zmienne], function(x) mean(x, na.rm = TRUE)), 2),
+  sd = round(sapply(hotel_clean[nowe_zmienne], function(x) sd(x, na.rm = TRUE)), 2),
+  Q1 = sapply(hotel_clean[nowe_zmienne], function(x) quantile(x, 0.25, na.rm = TRUE)),
+  mediana = sapply(hotel_clean[nowe_zmienne], function(x) median(x, na.rm = TRUE)),
+  Q3 = sapply(hotel_clean[nowe_zmienne], function(x) quantile(x, 0.75, na.rm = TRUE)),
+  row.names = NULL) %>%
+  datatable(caption = "Nowe zmienne", rownames = FALSE, options = list(paging = FALSE, dom = 't'))
+```
+
+## 3.2. Usuwanie zmiennych 
+:::  {style="text-align: justify;"}
+Ze zbioru danych wykluczono zmienne, które ze względu na konieczność ochrony danch osobowych klientów, utowrzono sztucznie, a które uznano za nieistotne informacyjnie przy analizie głównych składowych (PCA) oraz analizie skupień. 
+
+Pominięto również wybrane, nie niosące istotnej wartości informacyjnej zmienne czasowe oraz zmienne opisujące końcowy status rezerwacji. Uzasadnia się to faktem, iż zmienne te odnoszą się do zdarzeń, które nastąpiły po dokonaniu rezerwacji, a co za tym idzie - nie opisują one sytuacji klienta w momencie podejmowania decyzji, co mogłyby zniekształcać wyniki przeprowadzanych analiz.
+
+Dodatkowo, usunięto zmienną *kraj_pochodzenia*, która charakteryzuje się bardzo dużą liczbą kategorii. Jej uwzględnienie w analizie mogłoby proawdzić do nadmiernego zwiększenia liczby zmiennych i utrudniania interpretacji wyników.
+
+Usunięte zmienne to:
+
+- *imię_i_nazwisko*, *adres_email*, *numer_telefonu*, *numer_karty_kredytowej* – zmienne sztuczne, nieistotne analitycznie,
+
+- *dzień_przyjazdu_w_miesiącu*, *rok_przyjazdu* – zmienne czasowe, nadmiarowe,
+
+- *data_statusu_rezerwacji* – zmienna opisująca stan rezerwacji po jej realizacji,
+
+- *kraj_pochodzenia* – zmienna o bardzo dużej liczbie kategorii.
+
+
+We wcześniejszych etapach analizy usunięto także zmienne *firma* oraz *agent_rezerwacji* ze względu na wsytępowanie wartości NA oraz nie wnoszenie istotnych informacji do analizy (zmienne bez znaczenia liczbowego, zawierające numery ID firm oraz agencji rezerwujących pokoje).
+:::
+
+```{r usuwanie zmiennych, include=FALSE}
+do_usuniecia <- c(
+  "imię_i_nazwisko",
+  "adres_email",
+  "numer_telefonu",
+  "numer_karty_kredytowej",
+  "dzień_przyjazdu_w_miesiącu",
+  "rok_przyjazdu",
+  "data_statusu_rezerwacji",
+  "kraj_pochodzenia")
+
+hotel_clean <- hotel_clean %>%
+  select(-all_of(do_usuniecia))
+```
+
+
+## 3.3. Standaryzacja i normalizacja
 
 Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień)
 
 ```{r standaryzacja z-score, include=FALSE}
-hotel_std <- hotel_clean[zmienne_ilosciowe] %>% 
+# Dodanie nowej zmiennej do wektora zmeinne_ilosciowe
+zmienne_ilosciowe <- c(zmienne_ilosciowe, "liczba_nocy")
+
+# Wyznaczenie zmiennych o zerowym odchyleniu
+zmienne_stale <- sapply(hotel_clean[zmienne_ilosciowe], function(x) sd(x) == 0)
+
+# Wybór zmiennych niestałych do standaryzacji
+zmienne_do_standaryzacji <- zmienne_ilosciowe[!zmienne_stale]
+
+
+# STANDARYZACJA ZMIENNYCH ILOŚCIOWYCH, NIESTAŁYCH
+hotel_std <- hotel_clean[zmienne_do_standaryzacji] %>% 
   scale() %>% 
   as.data.frame()
+
+
+# Usunięcie pominiętych zmiennych z wektora zmienne_kategoryczne
+zmienne_kategoryczne <- zmienne_kategoryczne %>%
+  setdiff(c("rok_przyjazdu", "dzień_przyjazdu_w_miesiącu"))
+
+# Dodanie nowej zmiennej do wektora zmeinne_binarne
+zmienne_binarne <- c(zmienne_binarne, "zmiana_pokoju")
+
+# Dołączenie zmiennych kategorycznych i binarnych do zbioru hotel_std
+hotel_std <- hotel_std %>%
+  bind_cols(hotel_clean %>% select(all_of(c(zmienne_kategoryczne, zmienne_binarne))))
+
+# Dołączenie zmiennej stałej do zbioru hotel_std
+hotel_std$liczba_niemowląt <- hotel_clean$liczba_niemowląt
 ```
 
 
