@@ -9,6 +9,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 # Biblioteki:
 library(readr)
 library(skimr)
@@ -23,6 +24,8 @@ library(patchwork)
 library(DT)
 library(naniar)
 library(moments)
+library(ggcorrplot)
+library(factoextra)
 ```
 
 # 1. Wprowadzenie
@@ -1053,8 +1056,8 @@ W celu dokładniejszej analizy utworzono wykres UpSet, który prezentuje współ
 
 ***Test MCAR***
 
-H0: 
-HA:
+*H0: * 
+*HA: *
 
 ```{r test MCAR, echo=FALSE}
 mcar_test(hotel_miss) %>%
@@ -1435,7 +1438,6 @@ do_usuniecia <- c(
   "kraj_pochodzenia",
   "rodzaj_zarezerwowanego_pokoju",
   "rodzaj_przydzielonego_pokoju",
-  "rodzaj_przydzielonego_pokoju",
   "liczba_nocy_weekendowych",
   "liczba_nocy_tygodniowych",
   "liczba_dorosłych",
@@ -1447,13 +1449,15 @@ hotel_clean <- hotel_clean %>%
 ```
 
 
-## 3.3. Standaryzacja i normalizacja
+## 3.3. Standaryzacja danych
 
-Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień)
+:::  {style="text-align: justify;"}
+Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień).
+:::
 
 ```{r standaryzacja z-score, include=FALSE}
 # Dodanie nowej zmiennej do wektora zmeinne_ilosciowe i usunięcie pominiętych
-zmienne_ilosciowe <- c(zmienne_ilosciowe, "liczba_nocy") %>%
+zmienne_ilosciowe <- c(zmienne_ilosciowe, "liczba_nocy", "liczba_osób") %>%
   setdiff(c("liczba_nocy_weekendowych", "liczba_nocy_tygodniowych", "liczba_dorosłych",
   "liczba_dzieci", "liczba_niemowląt"))
 
@@ -1486,22 +1490,324 @@ hotel_std <- hotel_std %>%
 hotel_std$liczba_niemowląt <- hotel_clean$liczba_niemowląt
 ```
 
+:::  {style="text-align: justify;"}
+Finalny zbiór po obróbce zawiera `r nrow(hotel_std)` obserwacji i `r ncol(hotel_std)` zmiennych.
+:::
 
 # 4. ZASTOSOWANIE METOD WIELOWYMIAROWYCH
 
 ## 4.1. PCA – Analiza głównych składowych
 
-PCA umożliwia redukcję wymiarowości oraz ocenę, które zmienne wyjaśniają
-największą część wariancji. Zostaną przedstawione wartości własne,
-wykres osypiska oraz biplot.
+:::  {style="text-align: justify;"}
+W celu redukcji wymiarowości i zbadania struktury danych ilościowych w zbiorze, zastosowano **analizę głównych składowych** ***(PCA – Principal Component Analysis)***. Jest to metoda statystyczna, która przekształca oryginalne zmienne w nowe, nieskorelowane czynniki, zwane *składowymi głównymi*. Składowe te są uporządkowane na podstawie malejącego udziału objaśniania całkowitej wariancji danych, co pozwala na wydobycie z nich najbardziej istotnych informacji przy użyciu mniejszej liczby wymiarów.
 
-Jeśli stosowano metody redukcji wymiaru (np. PCA), opisz:
+W kolejnych krokach przeprowadzono:
 
-• jakie dane weszły do analizy,
+1. **Analizę założeń PCA**, opartą o ocenę korelacji między zmiennymi, test Bartletta oraz kryterium KMO,
 
-• ile składowych wybrano i dlaczego,
+2.**Dobór liczby składowych** z wykorzystaniem kryterium procentu skumulowanej wariancji, kryterium Keisera oraz kryterium Catella (wykresu osypiska),
 
-• jaka część wariancji została wyjaśniona.
+3. **Interpretację wyników** – przedstawiono ładunki czynnikowe ilustrujące wkład zmiennych w poszczególne wymiary, wizualizację korelacji zmiennych ze składowymi głównymi i wykres udziału zmienności objaśnianej przez składowe (cos²).
+
+Ze względu na dużą liczbę obserwacji (116 661), aby uniknąć overplottingu, zrezygnowano z wizualizacji współrzędnych obserwacji w przestrzeni głównych składowych oraz biplotu.
+
+Do analizy włączono `r length(zmienne_ilosciowe)` zmiennych ilościowych, wybranych z pierwotnego zbioru zawierającego `r ncol(hotel_std)` zmiennych. Pozostałe zmienne, ze względu na charakter jakościowy, nie zostały uwzględnione w procedurze PCA.
+:::
+
+### 4.1.1. Sprawdzenie założeń analizy PCA
+
+***1) Macierz korelacji***
+
+:::  {style="text-align: justify;"}
+W tym kroku ponownie sprawdzono wzajemne powiązania zmiennych ilościowych, tym razem na danych finalnych, po obróbce zmiennych.
+:::
+
+```{r założenie PCA - macierz korelacji, echo=FALSE, message=FALSE, warning=FALSE}
+hotelCorr<-cor(hotel_std[zmienne_ilosciowe])
+
+ggcorrplot(hotelCorr,tl.cex=9,lab=TRUE,lab_size=2.5,p.mat = hotelCorr)
+```
+:::  {style="text-align: justify;"}
+W przedstawionej macierzy korelacji można wydedukować, że istnieją pewne istotne korelacje między zmiennymi w zbiorze.
+
+
+***2) Test Bartletta***
+
+:::  {style="text-align: justify;"}
+*H0: Macierz korelacji jest macierzą jednostkową (zmienne nie są skorelowane) - nie ma sensu    wykonywać PCA*
+*H1: Macierz korelacji nie jest macierzą jednostkową (zmienne są skorelowane) - warto wykonywać redukcję wymiaru, analizę PCA*
+:::
+
+```{r założenia PCA - test bartletta, echo=FALSE, message=FALSE, warning=FALSE}
+cortest.bartlett(hotel_std[zmienne_ilosciowe]) %>%
+  as.data.frame() %>%
+  mutate(chisq = round(chisq, 3)) %>%
+  datatable(rownames = FALSE, 
+            caption = "Wyniki testu Bartletta",
+            options = list(dom = 't', paging = FALSE))
+```
+
+:::  {style="text-align: justify;"}
+Na podstawie testu Bartletta i p-value = 0 < alfa = 0,05 odrzucono H0 na rzecz HA stwierdzając, że macierz korelacji badanego zbioru danych ilościowych nie jest macierzą jednostkową, wobec czego warto wkonać redukcję wymiaru.
+:::
+
+***3) Kryterum KMO (Keisera-Meyera-Olkina)***
+
+```{r założenia PCA - KMO, echo=FALSE}
+kmo_res <- KMO(hotel_std[zmienne_ilosciowe])
+
+data.frame(
+  Zmienna = names(kmo_res$MSAi),
+  MSA = round(kmo_res$MSAi, 3)) %>%
+  datatable(rownames = FALSE,
+            caption = paste0("Miary KMO (MSA) dla zmiennych - Overall MSA = ", round(kmo_res$MSA, 2)),
+            options = list(dom = 't', paging = FALSE, ordering = FALSE)) %>%
+  formatRound("MSA", 2)
+```
+
+:::  {style="text-align: justify;"}
+Według ogólnie przyjmowanych progów dla MSA, tj.:
+
+~0.5 - kryterium KMO nie roztrzyga, czy warto wykonywać PCA
+
+>0.5 - warto wykonywać PCA
+
+<0.5 - nie ma sensu wykonywać PCA
+
+można uznać, że warto wykonać analizę głównych składowych dla analizowanych zmiennych, gdyż wynoszą one w większości wiecej lub blisko 0,5. Potwierdza to również *Overall MSA* wynoszące 0,58.
+:::
+
+
+### 4.1.2. Określenie liczby składowych do redukcji
+
+```{r pca, include=FALSE}
+pca <- prcomp(hotel_std[zmienne_ilosciowe], center = TRUE, scale. = TRUE)
+```
+
+***1) Kryterium procentu wariancji***
+
+```{r kryterium udziału zmienności, echo=FALSE}
+get_eig(pca) %>%
+  rename_with(~ c("wartość własna",  "% wariancji", "skumulowany % wariancji"), .cols = c("eigenvalue",  "variance.percent", "cumulative.variance.percent")) %>%
+  datatable(get_eig(pca), caption = "Kryterium udziału zmienności", options = list(dom = 't', paging = FALSE, ordering = FALSE)) %>%
+  formatRound(c("wartość własna",  "% wariancji", "skumulowany % wariancji"), 2)
+```
+
+:::  {style="text-align: justify;"}
+**Skumulowana wariancja procentowa** (> 80%) wskazała, że najkorzystnieszą opcją dla wybranych zmiennych jest zredukowanie ich do `r 4-1` wymiarów.
+:::
+
+***2) Kryterium Keisera***
+
+:::  {style="text-align: justify;"}
+**Wartość własna**, zaprezentowana w tabeli *"Kryterium udziału zmienności"* przekracza $*1*$ dla 4 zmiennych, co również sugeruje zastosowanie 3 wymiarów.
+:::
+
+***3) kryterium Catella***
+
+```{r wykres osypiska, echo=FALSE}
+fviz_screeplot(pca, addlabels=TRUE)
+```
+
+:::  {style="text-align: justify;"}
+**Wykres osypiska** natomiast uwidocznił punkt przegięcia w 3 wymiarze - co za tym idzie, według *kryterium Catella* należy zastosować `r 3-1` wymiary.
+:::
+
+:::  {style="text-align: justify;"}
+***Wniosek***
+Na podstawie powyższej analizy uznano, że najbardziej dopasowaną liczbą wymiarów, do których należy zredukować analizowane zmienne to **3**.
+:::
+
+
+##@ 4.1.3. Interpretacja wyników PCA
+
+```{r ładunki czynnikowe, echo=FALSE}
+pcaVars <- get_pca_var(pca)
+
+ggcorrplot(t(pcaVars$coord[,1:3]),colors = c("#4361ee","white","#e63946"),
+           tl.cex=9,lab=TRUE,lab_size=3)
+
+contrib_df <- as.data.frame(pcaVars$contrib[, 1:3])
+contrib_df$Zmienna <- rownames(contrib_df)
+
+contrib_df %>%
+  pivot_longer(
+    cols = starts_with("Dim"),
+    names_to = "Składowa",
+    values_to = "Wkład") %>%
+  ggplot(aes(x = Zmienna, y = Wkład, fill = Składowa)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ Składowa, scales = "free_x") +
+  scale_fill_manual(values = c("Dim.1" = "#e27396",
+                               "Dim.2" = "#5fa8d3", 
+                               "Dim.3" = "#709775")) +
+  geom_hline(yintercept = 10,
+             linetype = "dashed",
+             color = "red") +
+  geom_text(aes(
+    label = paste0(round(Wkład, 1), "%"),
+    hjust = ifelse(Wkład < 5.5, -0.1, 1.1)),
+    size = 2.5) +
+  coord_flip() +
+  labs(title = "Wkład zmiennych w główne składowe PCA",
+       y = "Wkład (%)",
+       x = "") +
+  theme_minimal()
+
+#### propozycja 2
+contrib1 <- fviz_contrib(pca, choice = "var", axes = 1,
+                       title = "Wkład zmiennych w Dim.1",
+                       fill = "#e27396",
+                       color = "#e27396")
+
+contrib1 +
+  ylab("Wkład (%)") +
+  geom_text(aes(label = paste0(round(contrib, 1), "%")), 
+            vjust = -0.5,
+            size = 3,
+            color = "black") +
+  ylim(0, max(contrib1$data$contrib) * 1.1)
+
+
+
+contrib2 <- fviz_contrib(pca, choice = "var", axes = 2,
+                       title = "Wkład zmiennych w Dim.2",
+                       fill = "#5fa8d3",
+                       color = "#5fa8d3")
+
+contrib2 +
+  ylab("Wkład (%)") +
+  geom_text(aes(label = paste0(round(contrib, 1), "%")), 
+            vjust = -0.5,
+            size = 3,
+            color = "black") +
+  ylim(0, max(contrib2$data$contrib) * 1.1)
+
+
+
+contrib3 <- fviz_contrib(pca, choice = "var", axes = 3,
+                       title = "Wkład zmiennych w Dim.3",
+                       fill = "#709775",
+                       color = "#709775")
+
+contrib3 +
+  ylab("Wkład (%)") +
+  geom_text(aes(label = paste0(round(contrib, 1), "%")), 
+            vjust = -0.5,
+            size = 3,
+            color = "black") +
+  ylim(0, max(contrib3$data$contrib) * 1.1)
+```
+
+:::  {style="text-align: justify;"}
+Współczynniki korelacji między oryginalnymi zmiennymi a nowo utworzonymi składowymi (**ładunki czynnikowe**) ukazują, które z nich najsilniej (a które najsłabiej) oddziaływały na daną składową główną. O znaczeniu zmiennej decydował jej procentowy wkład w daną składową (> 10%), natomiast znak ładunku określał kierunek zależności.
+
+Najbardziej wpływające na utworzone wymiary zmienne to:
+
+***Wymiar 1.***
+
+- *średnia_cena_za_noc* (29,0%, negatywny wpływ)
+
+- *liczba_osób* (27,3%, negatywny wpływ)
+
+- *liczba_specjalnych_próśb* (15,3%, negatywny wpływ)
+
+- *wcześniejsze_odwołania* (10,3%, dodatni wpływ)
+
+***Wymiar 2.***
+
+- *czas_wyprzedzenia_rezerwacji* (37,8%, negatywny wpływ)
+
+- *wcześniejsze_rezerwacje_nieodwołane* (15,7%, dodatni wpływ)
+
+- *wymagane_miejsca_parkingowe* (12,3%, dodatni wpływ)
+
+***Wymiar 3.***
+
+- *liczba_zmian_rezerwacji* (50,2%, negatywny wpływ)
+
+- *liczba_nocy* (28,2%, negatywny wpływ)
+
+
+Wobec powyższego, zróżnicowanie rezerwacji hotelowych opisane zostało za pomocą trzech głównych cech:
+
+> **profil cenowy i preferencje klientów** (pierwsza składowa główna)
+> **planowanie rezerwacji** (druga składowa główna)
+> **elastyczność i długość pobytu w hotelu** (trzecia składowa główna)
+
+
+Korelację zmiennych oryginalnych z poszczególnymi składowymi głównymi przedstawia poniższa grafika.
+:::
+
+```{r wykresy zmiennych pca, echo=FALSE}
+fviz_pca_var(pca, axes=c(1,2), repel = TRUE, labelsize=3, col.var = "cos2",
+             gradient.cols = c("#4da1a9", "#3d348b", "#c9184a"))
+
+fviz_pca_var(pca, axes=c(1,3), repel = TRUE,labelsize=3, col.var = "cos2",
+             gradient.cols = c("#4da1a9", "#3d348b", "#c9184a"))
+
+fviz_pca_var(pca, axes=c(2,3), repel = TRUE, labelsize=3, col.var = "cos2",
+             gradient.cols = c("#4da1a9", "#3d348b", "#c9184a"))
+```
+:::  {style="text-align: justify;"}
+Z wykresów korelacji zmeinnych PCA wynika, że pierwsza główna składowa (*Dim1*) wraz z drugą (*Dim2*) łącznie wyjaśniają `r 14.4+17.1`% całkowitej wariancji danych. Uwzględnienie trzeciej składowej (*Dim3*) zwiększa dodatkowo ten odsetek do `r 14.4+17.1+10.9`%. 
+
+Na wykresach widoczne są wyraźne grupy zmiennych o zbliżonych kierunkach wektorów (np. w *Dim1-Dim2* para *wymagane_miejsca_parkingowe* i *liczba_specjalnych_próśb*, czy w *Dim2-Dim3* para *średnia_cena_za_noc* oraz *liczba_osób*), co wskazuje na ich dodatnią korelację, oraz zmienne skierowane przeciwnie (np. w *Dim1-Dim3* para *liczba_specjalnych_próśb* i *wcześniejsze_odwołania*), świadczące o ich ujemnym powiązaniu. Długość wektorów natomiast potwierdza, że zmienne wskazane wcześniej jako istotne dla poszczególnych wymiarów są właściwie przedstawiane w przestrzeni głównych składowych.
+:::
+
+```{r wykres objaśniania zmienności przez wymiary}
+# Wyświetlenie zasobów zmienności wspólnej w celu sprawdzenia jaka część zmienności danej zmiennej była wyjaśniana przez kolejne składowe
+
+cos2_1 <- fviz_cos2(pca, choice = "var", axes = 1,
+                       title = "Cos2 zmiennych w Dim.1",
+                       fill = "#e27396",
+                       color = "#e27396")
+cos2_1 +
+  ylab("Cos2 - jakość reprezentacji") +
+  geom_text(aes(label = paste0(round(cos2, 3)*100, "%")), 
+            vjust = -0.5,
+            size = 3,
+            color = "black") +
+  ylim(0, max(cos2_1$data$cos2) * 1.1)
+
+
+
+cos2_2 <- fviz_cos2(pca, choice = "var", axes = 2,
+                       title = "Cos2 zmiennych w Dim.2",
+                       fill = "#5fa8d3",
+                       color = "#5fa8d3")
+cos2_2 +
+  ylab("Cos2 - jakość reprezentacji") +
+  geom_text(aes(label = paste0(round(cos2, 3)*100, "%")), 
+            vjust = -0.5,
+            size = 3,
+            color = "black") +
+  ylim(0, max(cos2_2$data$cos2) * 1.1)
+
+
+
+cos2_3 <- fviz_cos2(pca, choice = "var", axes = 3,
+                       title = "Cos2 zmiennych w Dim.3",
+                       fill = "#709775",
+                       color = "#709775")
+cos2_3 +
+  ylab("Cos2 - jakość reprezentacji") +
+  geom_text(aes(label = paste0(round(cos2, 3)*100, "%")), 
+            vjust = -0.5,
+            size = 3,
+            color = "black") +
+  ylim(0, max(cos2_3$data$cos2) * 1.1)
+```
+
+:::  {style="text-align: justify;"}
+***Wymiar 1.*** ponadto reprezentował w największej mierze zmienność *średniej ceny za noc* (49,8%) oraz *liczby osób* (46,8%). 
+
+***Wymiar 2.*** odpowiadał za objaśnienie w 54,3% wariancji *czasu wprzedzenia rezerwacji*. 
+
+***Wymiar 3.*** natomiast objaśnił głównie zmienność *liczby zmian rezerwacji* (w 54,9%) oraz *liczby nocy* (w 30,9%).
+:::
+
+
 
 ## 4.2 Analiza skupień
 
