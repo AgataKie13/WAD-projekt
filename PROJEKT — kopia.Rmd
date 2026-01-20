@@ -851,13 +851,9 @@ Analiza obserwacji odstających została przeprowadzona dla zmiennych
 ilościowych.
 :::
 
-### 2.5.1 Wykresy pudełkowe
+### 2.5.1 Wykresy pudełkowe ze standaryzacją
 
 ```{r boxplot, echo=FALSE, message=FALSE, warning=FALSE}
-df_ilosciowe <- hotel %>% select(all_of(zmienne_ilosciowe))
-boxplot(df_ilosciowe, main = "Analiza odchyleń", las = 2)
-
-##### PROPOZYCJA DLA WIZUALIZACJI WSTĘPNEJ (ZE STANDARYZACJĄ)
 hotel %>%
   select(all_of(zmienne_ilosciowe)) %>%
   scale() %>%
@@ -873,10 +869,7 @@ hotel %>%
 ```
 
 ::: {style="text-align: justify;"}
-Ogólna analiza odchyleń przy wykorzystaniu boxplotów pokazuje, że są
-zmienne, w których występują wartości odstające. Poniżej przeprowadzona
-zostanie szczegółowa analiza odchyleń za pomocą wykresów
-kwantyl-kwantyl.
+Ogólna analiza odchyleń przy wykorzystaniu boxplotów pokazuje, w których zmiennych ilościowych występują wartości odstające. Poniżej przeprowadzona zostanie szczegółowa analiza odchyleń za pomocą wykresów kwantyl-kwantyl.
 :::
 
 ### 2.5.2. Wykresy kwantyl-kwantyl z określeniem skośności i kurtozy
@@ -984,17 +977,12 @@ zwrócić na zmienne *liczba_dorosłych* oraz *średnia_cena_za_noc*, gdzie
 zidentyfikowano punkty (m.in. nr 2174 oraz 48515) o ekstremalnie
 wysokich wartościach statystyki $D$, sięgających poziomu 0.8, co
 wskazuje na ich krytyczny wpływ na dopasowanie modelu. Znaczące wartości
-odstające o charakterze punktów wpływowych widoczne są również dla
-zmiennych *liczba_niemowląt* (obserwacja 46620, $D \approx 0.3$) oraz
-*wymagane_miejsca_parkingowe* (obserwacja 29046, $D \approx 0.15$).
+odstające o charakterze punktów wpływowych obserwuje się również dla
+zmiennych *liczba_niemowląt* (obserwacja 46620, $D \approx 0.3$).
 Istotne zakłócenia odnotowano także w przypadku zmiennych
-*wcześniejsze_rezerwacje_nieodwołane* oraz *liczba_zmian_rezerwacji*. W
-pozostałych przypadkach, takich jak *liczba_specjalnych_próśb* czy *czas_wyprzedzenia_rezerwacji*, wartości odległości Cooka są rzędu $10^{-3}$
-lub mniejsze, co sugeruje brak dominujących outlierów zaburzających
-wyniki. W celu zapewnienia wiarygodności prognoz i uniknięcia biasu
-wynikającego z jednostkowych anomalii, rekomenduje się usunięcie
-obserwacji o najwyższym wpływie z wyżej wymienionych sześciu zmiennych,
-a następnie ponowną kalibrację modelu na oczyszczonym zbiorze danych.
+*wcześniejsze_rezerwacje_nieodwołane* oraz *liczba_zmian_rezerwacji*. 
+Warto także zwrócić uwagę na *liczbę_dni_na_liście_oczekujących* oraz *wcześniejsze_odwołania*, w których obserwuje się pojedyncze, lecz wysokie wartości odstające.
+W pozostałych przypadkach, takich jak *liczba_specjalnych_próśb* czy *czas_wyprzedzenia_rezerwacji*, wartości odległości Cooka są rzędu $10^{-3}$ lub mniejsze, co sugeruje brak dominujących outlierów zaburzających wyniki. W celu zapewnienia wiarygodności prognoz i uniknięcia biasu wynikającego z jednostkowych anomalii, rekomenduje się usunięcie obserwacji o najwyższym wpływie z wyżej wymienionych sześciu zmiennych, a następnie ponowną kalibrację modelu na oczyszczonym zbiorze danych.
 :::
 
 # 3. Czyszczenie danych
@@ -1020,11 +1008,10 @@ W celu dokładniejszej analizy utworzono wykres UpSet, który prezentuje współ
 - w zmiennej *firma*, poza wskazanymi zależnościami braków, zdecydowana większość wartości NA (ok. `r round(102831/112593*100, 2)`%) występuje niezależnie.
 :::
 
-
 ***Test MCAR***
 
-*H0: * 
-*HA: *
+*H0: dane są MCAR - braki danych są całkowicie losowe* 
+*HA: dane nie są MCAR - braki danych są zależne od danych*
 
 ```{r test MCAR, echo=FALSE}
 mcar_test(hotel_miss) %>%
@@ -1263,7 +1250,28 @@ for (var in vars_changed) {
 }
 ```
 
-opis
+:::  {style="text-align: justify;"}
+**INTERPRETACJEl**
+*1. Średnia cena za noc*
+Na pierwszym wykresie widać, jak ekstremalne wartości odstające przekraczające 5000 jednostek całkowicie zniekształciły skalę i uniemożliwiły analizę rozkładu. Po usunięciu tych błędnych lub nietypowych rekordów, skala osi Y uległa znacznemu zawężeniu, co pozwoliło na wyraźne przedstawienie struktury cenowej z medianą oscylującą w okolicach 95 jednostek. Dzięki temu zabiegowi dane stały się czytelne, ujawniając, że większość cen mieści się w przedziale od 70 do 125, podczas gdy pozostałe wartości powyżej 200 stanowią już tylko nieliczne i łatwe do zidentyfikowania punkty.
+
+*2. Liczba dni na liście oczekujących*
+Ponownie obsługa outlierów pozwoliła na ograniczenie osi Y poprawiając czytelność wyników.
+Porównanie wykresów pokazuje, że przed obróbką dane były silnie obciążone ekstremalnymi wartościami odstającymi, sięgającymi blisko 400 dni, co spłaszczało główną część rozkładu do poziomu zerowego. Poprzez usunięcie tych najbardziej oddalonych punktów i zawężenie skali osi Y do 80 jednostek, udało się uzyskać znacznie większą szczegółowość danych, choć sam kształt pudełka nadal pozostaje minimalny ze względu na dużą koncentrację obserwacji przy wartościach bliskich zeru. Taka transformacja pozwala na lepszą identyfikację "łagodniejszych" wartości odstających i pokazuje, że po odrzuceniu ekstremów większość pozostałych incydentalnych oczekiwań mieści się w zakresie do około 75 dni.
+
+*3. Liczba niemowląt*
+Pierwotny wykres wskazywał na obecność nierealistycznych wartości odstających, sięgających nawet 10 niemowląt, co w kontekście rezerwacji hotelowej jest niemal niemożliwe. Po procesie czyszczenia zmienna ta została sprowadzona do stałej wartości równej zero, co widać na wykresie „po” jako pojedynczą, poziomą linię. Oznacza to, że po odrzuceniu błędnych lub ekstremalnie rzadkich rekordów, cecha ta przestała wykazywać zmienność w analizowanym zbiorze danych.
+
+*4. Liczba zmian rezerwacji*
+*5. Wcześniejsze rezerwacje nieodwołane*
+Pierwotne zbiory danych zawierały liczne wartości odstające, sięgające nawet 60 modyfikacji w przypadku zmiennej *wcześniejsze rezerwacje nieodwołane*, co niemal całkowicie maskowało rzeczywistą strukturę rezerwacji. Po przeprowadzeniu procesu czyszczenia danych i zawężeniu skali do zakresu od 0 do 3 rozkłady stały się znacznie bardziej przejrzyste. W przypadku zmiennej *liczba zmian rezerwacji* drugi wykres wskazuje, że zdecydowana większość klientów nie dokonuje żadnych modyfikacji swoich zamówień. Z kolei dla zmiennej *wcześniejsze rezerwacje nieodwołane* oczyszczony rozkład ujawnia typową strukturę lojalności klientów, pozbawioną zniekształceń wynikających z pojedynczych, ekstremalnych obserwacji. Usunięcie wartości skrajnych umożliwiło również wyodrębnienie rzadkich, lecz wiarygodnych przypadków, w których liczba zmian mieści się w przedziale od 1 do 3, stanowiących obecnie czytelny margines analizowanego zbioru.
+
+*6. Wcześniejsze odwołania*
+Proces czyszczenia danych wyeliminował ekstremalne wartości odstające sięgające 25 incydentów, które całkowicie zniekształcały obraz statystyczny grupy. Po zawężeniu skali do zakresu 0–1, wykres stał się czytelny i wykazał, że po usunięciu anomalii typowa aktywność w tym obszarze ogranicza się do pojedynczych przypadków. Taka korekta pozwoliła przejść od chaotycznego zbioru punktów do klarownej prezentacji, w której jedynym istotnym punktem poza zerem jest wartość 1.
+
+*7. Liczba dorosłych*
+W wyniku czyszczenia danych usunięto skrajne i nierealistyczne obserwacje odstające, które przed korektą osiągały nawet 50–60 osób w ramach pojedynczej rezerwacji. Po ograniczeniu zakresu wartości do przedziału 0–4 wykres stał się czytelny i jednoznacznie pokazał, że najczęściej występują rezerwacje obejmujące 2 osoby dorosłe, co odpowiada medianie analizowanego zbioru. Eliminacja anomalii pozwoliła na uzyskanie spójnego i wiarygodnego rozkładu, odzwierciedlającego naturalne zróżnicowanie liczebności grup podróżnych, które mieści się w granicach od 0 do 4 osób i było wcześniej całkowicie zaburzone przez błędy danych.
+:::
 
 ```{r Sprawdzanie obsługi wartości odstających 3, echo=FALSE}
 # Statystyki "przed" i "po" przekształceniu zmiennych
