@@ -1,5 +1,5 @@
 ---
-title: "Wielowymiarowa analiza jakości wina na podstawie danych ..."
+title: "Wielowymiarowa Analiza Rezerwacji Hotelowych"
 author: "Agata Kierznikowicz, Zuzanna Łomża"
 date: "2025-12-05"
 output: rmdformats::readthedown
@@ -28,6 +28,10 @@ library(ggcorrplot)
 library(factoextra)
 library(NbClust) 
 library(cluster)
+library(reshape2)
+library(ggpubr)
+library(fmsb)
+library(scales)
 ```
 
 # 1. Wprowadzenie
@@ -170,8 +174,7 @@ kodowaniu) lub klasteryzacji
 
 -   **reservation_status**, **reservation_status_date** → zmienne
     opisujące status rezerwacji są bezpośrednio powiazane ze zmienną
-    objaśniającą *(!trzeba zrobić macierz korelacji!)*; zostały
-    wykluczone z modelowania, aby uniknąć wycieku informacji (data
+    objaśniającą; zostały wykluczone z modelowania, aby uniknąć wycieku informacji (data
     leakage);
 
 -   **agent**, **company**, **name**, **email**, **phone.number**,
@@ -410,10 +413,10 @@ kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
 
 # 5. Wyświetlenie tabel
 ilosciowe_tbl %>%
-  datatable(caption = "Zmienne ilościowe", rownames = FALSE, options = list(paging = FALSE))
+  datatable(caption = "Zmienne ilościowe", rownames = FALSE, options = list(paging = FALSE, columnDefs = list(list(className = 'dt-center', targets = 1:7))))
 
 binarne_tbl %>%
-  datatable(caption = "Zmienne binarne", rownames = FALSE, options = list(paging = FALSE))
+  datatable(caption = "Zmienne binarne", rownames = FALSE, options = list(paging = FALSE, columnDefs = list(list(className = 'dt-center', targets = 1:5))))
 
 kategoryczne_tbl %>%
   rename_with(~ c("%_Top1","%_Top2","%_Top3"), .cols = c(Top1_pct, Top2_pct, Top3_pct)) %>%
@@ -470,7 +473,7 @@ for (var in logarytm) {
 ```
 
 ::: {style="text-align: justify;"}
-Histogramy zmiennych ilościowych zaprezentowano z wykorzystaniem
+Histogramy **zmiennych ilościowych** zaprezentowano z wykorzystaniem
 logarytmicznej osi OY, co pozwoliło odsłonić strukturę rozkładów
 niewidoczną przy klasycznej skali. Wynika to z faktu, że we wszystkich
 przypadkach zdecydowanie dominuje wartość „0”, skutecznie maskująca
@@ -518,7 +521,7 @@ for (var in iloscowe) {
 ```
 
 ::: {style="text-align: justify;"}
-Analizowane pięć zmiennych liczbowych wykazuje wyraźnie zróżnicowane
+Analizowane pięć **zmiennych liczbowych** wykazuje wyraźnie zróżnicowane
 kształty rozkładów, co widać na przygotowanych histogramach. W każdej z
 nich obserwacje koncentrują się głównie przy niskich wartościach, jednak
 tylko zmienna *czas_wyprzedzenia_rezerwacji* prezentuje typowy rozkład
@@ -565,7 +568,7 @@ for (var in c(zmienne_kategoryczne)) {
 ```
 
 ::: {style="text-align:justify;"}
-Wykresy rozkładów zmiennych kategorycznych pozwoliły przyjrzeć się
+Wykresy rozkładów **zmiennych kategorycznych** pozwoliły przyjrzeć się
 strukturze danych, wskazać dominujące kategorie oraz wstępnie ocenić
 zmienne potencjalnie wpływające na *odwołanie_rezerwacji.* Na podstawie
 wizualizacji można zauważyć, że największe zróżnicowanie udziału odwołań
@@ -687,16 +690,18 @@ korelacji.
 
 ### 2.3.1. Testy istotności korelacji
 ::: {style="text-align: justify;"}
-H0: Nie istnieje istotna statystycznie korelacja pomiędzy porównywanymi zmiennymi (r = 0).
+H0: Nie istnieje istotna statystycznie korelacja pomiędzy porównywanymi zmiennymi (r = 0).  
 HA: Istnieje istotna statystycznie korelacja pomiędzy porównywanymi zmiennymi (r ≠ 0).
 :::
 
 1. Test istotności korelacji zmiennych *liczba_nocy_weekendowych* oraz *liczba_nocy_tygodniowych*:
+
 ```{r testy istotności korelacji 1, include=FALSE}
 cor_test_results2 <- cor.test(hotel$liczba_nocy_weekendowych, hotel$liczba_nocy_tygodniowych)
 ```
-r = `r round(cor_test_results2$estimate, 3)`
-p-value = `r round(cor_test_results2$p.value, 5)`
+**r = `r round(cor_test_results2$estimate, 3)`**
+
+**p-value = `r round(cor_test_results2$p.value, 5)`**
 
 ::: {style="text-align: justify;"}
 Współczynnik korelacji r = `r round(cor_test_results2$estimate, 3)` wskazuje na umiarkowaną dodatnią zależność między zmiennymi. Bardzo niska wartość p-value (≈ 0) pozwala odrzucić hipotezę zerową, co oznacza, że dłuższe pobyty obejmujące weekend częściej wiążą się również z większą liczbą nocy w dni robocze.
@@ -707,6 +712,7 @@ Współczynnik korelacji r = `r round(cor_test_results2$estimate, 3)` wskazuje n
 cor_test_results2 <- cor.test(hotel$liczba_specjalnych_próśb, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
+
 p-value = `r round(cor_test_results2$p.value, 5)`
 
 ::: {style="text-align: justify;"}
@@ -718,6 +724,7 @@ Ujemna korelacja (r = `r round(cor_test_results2$estimate, 3)`) oznacza słabą,
 cor_test_results2 <- cor.test(hotel$wymagane_miejsca_parkingowe, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
+
 p-value = `r round(cor_test_results2$p.value, 5)`
 
 ::: {style="text-align: justify;"}
@@ -729,6 +736,7 @@ Wartość r = `r round(cor_test_results2$estimate, 3)` wskazuje na słabą ujemn
 cor_test_results2 <- cor.test(hotel$czas_wyprzedzenia_rezerwacji, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
+
 p-value = `r round(cor_test_results2$p.value, 5)`
 
 ::: {style="text-align: justify;"}
@@ -740,6 +748,7 @@ Dodatnia korelacja r = `r round(cor_test_results2$estimate, 3)` oznacza słabą 
 cor_test_results2 <- cor.test(hotel$wcześniejsze_odwołania, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
+
 p-value = `r round(cor_test_results2$p.value, 5)`
 
 ::: {style="text-align: justify;"}
@@ -751,6 +760,7 @@ Współczynnik r = `r round(cor_test_results2$estimate, 3)` wskazuje na bardzo s
 cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
+
 p-value = `r round(cor_test_results2$p.value, 5)`
 
 ::: {style="text-align: justify;"}
@@ -762,6 +772,7 @@ Ujemna korelacja r = `r round(cor_test_results2$estimate, 3)` wskazuje na słab�
 cor_test_results2 <- cor.test(hotel$powracający_gość, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
+
 p-value = `r round(cor_test_results2$p.value, 5)`
 
 ::: {style="text-align: justify;"}
@@ -769,7 +780,7 @@ Bardzo słaba ujemna korelacja (r = `r round(cor_test_results2$estimate, 3)`) ws
 :::
 
 ::: {style="text-align: justify;"}
-Analiza korelacji wykazała, że wszystkie badane zależności są istotne
+***Analiza korelacji*** wykazała, że wszystkie badane zależności są istotne
 statystycznie (p \< 0,05), jednak w większości przypadków mają one słabą
 siłę. Najsilniejszą, umiarkowaną dodatnią korelację zaobserwowano
 pomiędzy *liczbą nocy weekendowych* i *tygodniowych* (r = 0,499). Pozostałe
@@ -879,7 +890,7 @@ wrap_title <- function(title, width = 30) {
   paste(strwrap(title, width = width), collapse = "\n")
 }
 
-num_vars <- names(df_ilosciowe)
+num_vars <- names(hotel[zmienne_ilosciowe])
 skew_values <- numeric(length(num_vars))
 kurt_values <- numeric(length(num_vars))
 
@@ -890,7 +901,7 @@ for (i in seq(1, length(num_vars), by = 2)) {
   for (j in 0:1) {
     idx <- i + j
     if (idx <= length(num_vars)) {
-      x <- na.omit(df_ilosciowe[[idx]])
+      x <- na.omit(hotel[zmienne_ilosciowe][[idx]])
       var_name <- num_vars[idx]
       
       qqnorm(x, pch = 1, frame = FALSE, cex.main = 1, cex.lab = 0.8, cex.axis = 0.8, main = wrap_title(paste("QQ plot:", var_name)))
@@ -938,8 +949,8 @@ datatable(tabela_interp,
 ```
 
 ::: {style="text-align: justify;"}
-Analiza rozkładów zmiennych ilościowych przy użyciu boxplotów, a także
-wartości *skośności* (skewness) i *kurtozy* (kurtosis) pozwoliła
+Analiza rozkładów zmiennych ilościowych przy użyciu **boxplotów**, a także
+wartości **skośności** ***(skewness)*** i **kurtozy** ***(kurtosis)*** pozwoliła
 zidentyfikować zmienne z odchyleniami i wartościami odstającymi. Wysokie
 wartości skewness wskazują na asymetrię rozkładu, a wysokie wartości
 kurtosis – na spiczastość i ciężkie ogony. W takich przypadkach lepszą
@@ -955,7 +966,7 @@ wykorzystaniem relacji między zmienną objaśnianą *odwołanie rezerwacji*
 a zmiennymi objaśniającymi.
 :::
 ```{r wielowymiarowa ao, echo=FALSE}
-layout(matrix(c(1, 2), nrow = TRUE, byrow = 2), heights = c(4, 1, 1))
+layout(matrix(c(1, 2), nrow = TRUE, byrow = 2), heights = c(2, 1, 1))
 
 for (var in zmienne_ilosciowe) {
   # Tworzymy formułę dynamicznie
@@ -970,7 +981,7 @@ for (var in zmienne_ilosciowe) {
 ```
 
 ::: {style="text-align: justify;"}
-Analiza odległości Cooka dla poszczególnych zmiennych objaśniających
+Analiza ***odległości Cooka*** dla poszczególnych zmiennych objaśniających
 wykazała zróżnicowany stopień wpływu obserwacji nietypowych na
 stabilność estymowanych parametrów modelu. Szczególną uwagę należy
 zwrócić na zmienne *liczba_dorosłych* oraz *średnia_cena_za_noc*, gdzie
@@ -999,7 +1010,7 @@ gg_miss_upset(hotel_miss)
 ```
 
 ::: {style="text-align: justify;"}
-W celu dokładniejszej analizy utworzono wykres UpSet, który prezentuje współwystępowanie braków między zmiennymi. Wynika z niego, że:
+W celu dokładniejszej analizy utworzono **wykres UpSet**, który prezentuje współwystępowanie braków między zmiennymi. Wynika z niego, że:
 
 - dla zmiennej *liczba_dzieci* wszystkie 4 braki występują współzależnie: 2 braki z wartościami NA w zmiennej firma oraz 2 braki z brakami we wszystkich dwóch pozostałych analizowanych zmiennych;
 
@@ -1010,7 +1021,7 @@ W celu dokładniejszej analizy utworzono wykres UpSet, który prezentuje współ
 
 ***Test MCAR***
 
-*H0: dane są MCAR - braki danych są całkowicie losowe* 
+*H0: dane są MCAR - braki danych są całkowicie losowe*  
 *HA: dane nie są MCAR - braki danych są zależne od danych*
 
 ```{r test MCAR, echo=FALSE}
@@ -1023,7 +1034,7 @@ mcar_test(hotel_miss) %>%
 ```
 
 ::: {style="text-align: justify;"}
-Test Little’a dla braków danych wykazał istotność statystyczną (χ² =
+**Test Little’a** dla braków danych wykazał istotność statystyczną (χ² =
 633.62, df = 6, p \< 0.001), co pozwala odrzucić hipotezę zerową o
 losowym występowaniu braków (MCAR). Oznacza to, że brakujące wartości w
 danych nie występują całkowicie losowo i mogą zależeć od innych
@@ -1037,16 +1048,16 @@ lub modele uwzględniające ich obecność.
 ::: {style="text-align: justify;"}
 Na podstawie powyższej analizy wysunięto następujące wnioski:
 
-- zmienna **lista_dzieci**
+- **zmienna** ***lista_dzieci***
 
 Wartości NA występujące w tej zmiennej stanowią marginalny odsetek obserwacji (0,003%). Ponadto, współwystępują one z brakami w pozostałych analizowanych pod kądtem braków zmiennych. Zaleca się wobec tego usunięcie rekordów z brakami, bez stosowania imputacji.
 
-- zmienna **agent_rezerwacji**
+- **zmienna** ***agent_rezerwacji***
 
-Brakujące wartości zmiennej agent_rezerwacji stanowią 13,69% wartości tej zmiennej i są one w 59,72% współzależne z brakami w zmiennej firma. Wobec tego, zaleca się zastosowanie prostej imputacji tych wartości średnią lub medianą wartości tej zmiennej, bądź uzupełnianie jej poprzez wielokrotną imputację, np. przy pomocy pakietu "mice".
+Brakujące wartości zmiennej agent_rezerwacji stanowią 13,69% wartości tej zmiennej i są one w 59,72% współzależne z brakami w zmiennej firma. Wobec tego, zaleca się zastosowanie prostej imputacji tych wartości średnią lub medianą wartości tej zmiennej, bądź uzupełnianie jej poprzez wielokrotną imputację, np. przy pomocy pakietu "mice". 
 Z uwagi jednak na charakter i specyfikę wartości zmiennej agent_rezerwacji, tj. ID agencji podróży, która dokonała rezerwacji, zasadnym uznano usunięcie tej zmiennej z dalszej analicy.
 
-- zmienna **firma**
+- **zmienna** ***firma***
 
 Braki w zmiennej firma, przez wzgląd, iż stanowią ponad 94% wszystkich wartości tej zmiennej, odbierają jej wartość informacyjną, wobec czego należy usunąć tę zmienną.
 :::
@@ -1115,7 +1126,7 @@ removed <- n_before - n_after
 ::: {style="text-align: justify;"}
 Aby ograniczyć wpływ obserwacji odstających na wariancję i odległości między obiektami, przed przeprowadzeniem analiz usunięto najbardziej wpływowe obserwacje, wyznaczone na podstawie statystyki Cooka, przyjmując próg $4/n$.
 
-W konsekwencji usunięto `r removed` obserwacji (`r round(removed/n_before*100, 2)`%) o najwyższym wpływie na dopasowanie modelu.
+W konsekwencji usunięto **`r removed`** obserwacji (**`r round(removed/n_before*100, 2)`%**) o najwyższym wpływie na dopasowanie modelu.
 :::
 
 ### 3.2.2. Winsoryzacja
@@ -1252,24 +1263,25 @@ for (var in vars_changed) {
 
 :::  {style="text-align: justify;"}
 **INTERPRETACJE:**
-*1. Średnia cena za noc*
+
+***1. Średnia cena za noc***  
 Na pierwszym wykresie widać, jak ekstremalne wartości odstające przekraczające 5000 jednostek całkowicie zniekształciły skalę i uniemożliwiły analizę rozkładu. Po usunięciu tych błędnych lub nietypowych rekordów, skala osi Y uległa znacznemu zawężeniu, co pozwoliło na wyraźne przedstawienie struktury cenowej z medianą oscylującą w okolicach 95 jednostek. Dzięki temu zabiegowi dane stały się czytelne, ujawniając, że większość cen mieści się w przedziale od 70 do 125, podczas gdy pozostałe wartości powyżej 200 stanowią już tylko nieliczne i łatwe do zidentyfikowania punkty.
 
-*2. Liczba dni na liście oczekujących*
+***2. Liczba dni na liście oczekujących***  
 Ponownie obsługa outlierów pozwoliła na ograniczenie osi Y poprawiając czytelność wyników.
 Porównanie wykresów pokazuje, że przed obróbką dane były silnie obciążone ekstremalnymi wartościami odstającymi, sięgającymi blisko 400 dni, co spłaszczało główną część rozkładu do poziomu zerowego. Poprzez usunięcie tych najbardziej oddalonych punktów i zawężenie skali osi Y do 80 jednostek, udało się uzyskać znacznie większą szczegółowość danych, choć sam kształt pudełka nadal pozostaje minimalny ze względu na dużą koncentrację obserwacji przy wartościach bliskich zeru. Taka transformacja pozwala na lepszą identyfikację "łagodniejszych" wartości odstających i pokazuje, że po odrzuceniu ekstremów większość pozostałych incydentalnych oczekiwań mieści się w zakresie do około 75 dni.
 
-*3. Liczba niemowląt*
+***3. Liczba niemowląt***  
 Pierwotny wykres wskazywał na obecność nierealistycznych wartości odstających, sięgających nawet 10 niemowląt, co w kontekście rezerwacji hotelowej jest niemal niemożliwe. Po procesie czyszczenia zmienna ta została sprowadzona do stałej wartości równej zero, co widać na wykresie „po” jako pojedynczą, poziomą linię. Oznacza to, że po odrzuceniu błędnych lub ekstremalnie rzadkich rekordów, cecha ta przestała wykazywać zmienność w analizowanym zbiorze danych.
 
-*4. Liczba zmian rezerwacji*
-*5. Wcześniejsze rezerwacje nieodwołane*
+***4. Liczba zmian rezerwacji***  
+***5. Wcześniejsze rezerwacje nieodwołane***  
 Pierwotne zbiory danych zawierały liczne wartości odstające, sięgające nawet 60 modyfikacji w przypadku zmiennej *wcześniejsze rezerwacje nieodwołane*, co niemal całkowicie maskowało rzeczywistą strukturę rezerwacji. Po przeprowadzeniu procesu czyszczenia danych i zawężeniu skali do zakresu od 0 do 3 rozkłady stały się znacznie bardziej przejrzyste. W przypadku zmiennej *liczba zmian rezerwacji* drugi wykres wskazuje, że zdecydowana większość klientów nie dokonuje żadnych modyfikacji swoich zamówień. Z kolei dla zmiennej *wcześniejsze rezerwacje nieodwołane* oczyszczony rozkład ujawnia typową strukturę lojalności klientów, pozbawioną zniekształceń wynikających z pojedynczych, ekstremalnych obserwacji. Usunięcie wartości skrajnych umożliwiło również wyodrębnienie rzadkich, lecz wiarygodnych przypadków, w których liczba zmian mieści się w przedziale od 1 do 3, stanowiących obecnie czytelny margines analizowanego zbioru.
 
-*6. Wcześniejsze odwołania*
+***6. Wcześniejsze odwołania***  
 Proces czyszczenia danych wyeliminował ekstremalne wartości odstające sięgające 25 incydentów, które całkowicie zniekształcały obraz statystyczny grupy. Po zawężeniu skali do zakresu 0–1, wykres stał się czytelny i wykazał, że po usunięciu anomalii typowa aktywność w tym obszarze ogranicza się do pojedynczych przypadków. Taka korekta pozwoliła przejść od chaotycznego zbioru punktów do klarownej prezentacji, w której jedynym istotnym punktem poza zerem jest wartość 1.
 
-*7. Liczba dorosłych*
+***7. Liczba dorosłych***  
 W wyniku czyszczenia danych usunięto skrajne i nierealistyczne obserwacje odstające, które przed korektą osiągały nawet 50–60 osób w ramach pojedynczej rezerwacji. Po ograniczeniu zakresu wartości do przedziału 0–4 wykres stał się czytelny i jednoznacznie pokazał, że najczęściej występują rezerwacje obejmujące 2 osoby dorosłe, co odpowiada medianie analizowanego zbioru. Eliminacja anomalii pozwoliła na uzyskanie spójnego i wiarygodnego rozkładu, odzwierciedlającego naturalne zróżnicowanie liczebności grup podróżnych, które mieści się w granicach od 0 do 4 osób i było wcześniej całkowicie zaburzone przez błędy danych.
 :::
 
@@ -1293,7 +1305,7 @@ data.frame(
 ```
 
 :::  {style="text-align: justify;"}
-Powyższy kod prezentuje porównanie statystyk opisowych zmiennych ilościowych przed i po ich przekształceniu. W pierwszym kroku wyświetlana jest tabela zawierająca statystyki dla danych przed czyszczeniem. Następnie dla zbioru bez outlierów obliczane są podstawowe miary statystyczne. Zaprezentowano je w drugiej tabeli jako dane po przetworzeniu. Dodatkowo w tabeli końcowej wizualnie wyróżnione zostają wiersze odpowiadające zmiennym, które uległy zmianie podczas procesu czyszczenia danych.
+Powyższe tabele prezentują **porównanie statystyk opisowych zmiennych ilościowych przed i po ich przekształceniu**. W pierwszym kroku wyświetlana jest tabela zawierająca statystyki dla danych przed czyszczeniem. Następnie dla zbioru bez outlierów obliczane są podstawowe miary statystyczne. Zaprezentowano je w drugiej tabeli jako dane po przetworzeniu. Dodatkowo w tabeli końcowej wizualnie wyróżnione zostają wiersze odpowiadające zmiennym, które uległy zmianie podczas procesu czyszczenia danych.
 
 Po usunięciu wartości odstających zmieniły się kluczowe miary statystyczne zmiennych ilościowych. Wartości minimalne i maksymalne zostały zredukowane do realistycznych granic, co sprawiło, że średnie i odchylenia standardowe stały się bardziej reprezentatywne dla większości obserwacji. Mediany i kwartyle pozostały względnie stabilne, natomiast zakresy międzykwartylowe lepiej oddają naturalne zróżnicowanie danych, bez zaburzeń spowodowanych ekstremalnymi rekordami. Dzięki temu rozkłady zmiennych stały się czytelniejsze, a interpretacja wyników bardziej wiarygodna.
 :::
@@ -1320,6 +1332,7 @@ skew_compare %>%
     caption = "Sprawdzenie parametru skośności po obsłudze elementów odstających") %>%
   formatRound("poprawa_p.%", 2)
 ```
+
 :::  {style="text-align: justify;"}
 Powyższa tabela porównująca **skośność zmiennych ilościowych przed i po usunięciu wartości odstających** oblicza dla każdej zmiennej skośność w oryginalnym zbiorze i w oczyszczonym. Następnie wylicza różnicę w wartościach bezwzględnych, pokazując, jak bardzo rozkład zbliżył się do symetrii. Wyniki wyświetlano w formie tabeli, w której wyróżniono w jakim procencie uległ poprawie parametr skośności po edycji danych.
 
@@ -1329,15 +1342,15 @@ Największej poprawie uległa zmienna *wcześniejsze_odwołania* (20,54%), *licz
 # 4. Obróbka zmiennych
 ## 4.1. Tworzenie nowych zmiennych
 :::  {style="text-align: justify;"}
-Do zbioru dodano nową zmienną - *zmiana_pokoju*, która sprawdza, czy rodzaj przydzielonego pokoju różnił się od pokoju pierwotnie zarezerwowanego przez klienta. Przyjmuje następujące wartości:
+Do zbioru dodano nową zmienną - **zmiana_pokoju**, która sprawdza, czy rodzaj przydzielonego pokoju różnił się od pokoju pierwotnie zarezerwowanego przez klienta. Przyjmuje następujące wartości:
 
 - 1 (rodzaj pokoju zarezerwowanego różni się od przydzielonego)
 
 - 0 (rodzaj pokoju pozostał bez zmian)
 
-Połączono także zmienne *liczba_nocy_weekendowych* oraz *liczba_nocy_tygodniowych* w celu utworzenia zmiennej o większej sile informacyjnej - *liczba_nocy*, opisującej łączną długość pobytu.
+Połączono także zmienne *liczba_nocy_weekendowych* oraz *liczba_nocy_tygodniowych* w celu utworzenia zmiennej o większej sile informacyjnej - **liczba_nocy**, opisującej łączną długość pobytu.
 
-W podobnym celu powstała zmienna *liczba_osób* charakteryzująca łączną liczbę gości, utworzoną ze zmeinnych: *liczba_dorosłych*, *liczba_dzieci* i *liczba_niemowląt*.
+W podobnym celu powstała zmienna **liczba_osób** charakteryzująca łączną liczbę gości, utworzoną ze zmeinnych: *liczba_dorosłych*, *liczba_dzieci* i *liczba_niemowląt*.
 :::
 
 ```{r dodawanie zmiennych, echo=FALSE}
@@ -1390,17 +1403,17 @@ Dodatkowo, usunięto zmienną *kraj_pochodzenia*, która charakteryzuje się bar
 
 Usunięte zmienne to:
 
-- *imię_i_nazwisko*, *adres_email*, *numer_telefonu*, *numer_karty_kredytowej* – zmienne sztuczne, nieistotne analitycznie,
+- **imię_i_nazwisko**, **adres_email**, **numer_telefonu**, **numer_karty_kredytowej** – zmienne sztuczne, nieistotne analitycznie,
 
-- *dzień_przyjazdu_w_miesiącu*, *rok_przyjazdu* – zmienne czasowe, nadmiarowe,
+- **dzień_przyjazdu_w_miesiącu**, **rok_przyjazdu** – zmienne czasowe, nadmiarowe,
 
-- *data_statusu_rezerwacji* – zmienna opisująca stan rezerwacji po jej realizacji,
+- **data_statusu_rezerwacji** – zmienna opisująca stan rezerwacji po jej realizacji,
 
-- *kraj_pochodzenia* – zmienna o bardzo dużej liczbie kategorii.
+- **kraj_pochodzenia** – zmienna o bardzo dużej liczbie kategorii.
 
-We wcześniejszych etapach analizy usunięto także zmienne *firma* oraz *agent_rezerwacji* ze względu na wsytępowanie wartości NA oraz nie wnoszenie istotnych informacji do analizy (zmienne bez znaczenia liczbowego, zawierające numery ID firm oraz agencji rezerwujących pokoje).
+We wcześniejszych etapach analizy usunięto także zmienne **firma** oraz **agent_rezerwacji** ze względu na wsytępowanie wartości NA oraz nie wnoszenie istotnych informacji do analizy (zmienne bez znaczenia liczbowego, zawierające numery ID firm oraz agencji rezerwujących pokoje).
 
-W wyniku dodania nowych zmiennych, które scalają informacje z poszczególnych z nich, wyklucza się ze zbioru zmienne: *rodzaj_zarezerwowanego_pokoju*, *rodzaj_przydzielonego_pokoju*, *liczba_nocy_weekendowych*, *liczba_nocy_tygodniowych*, *liczba_dorosłych*, *liczba_dzieci* i *liczba_niemowląt*.
+W wyniku dodania nowych zmiennych, które scalają informacje z poszczególnych z nich, wyklucza się ze zbioru zmienne: **rodzaj_zarezerwowanego_pokoju**, **rodzaj_przydzielonego_pokoju**, **liczba_nocy_weekendowych**, **liczba_nocy_tygodniowych**, **liczba_dorosłych**, **liczba_dzieci** i **liczba_niemowląt**.
 :::
 
 ```{r usuwanie zmiennych, include=FALSE}
@@ -1428,7 +1441,7 @@ hotel_clean <- hotel_clean %>%
 ## 4.3. Standaryzacja i normalizacja
 
 :::  {style="text-align: justify;"}
-Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień). 
+Zmienne ilościowe zostały poddane **standaryzacji metodą Z-score** w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień). 
 
 Metoda ta została wybrana, ponieważ analiza głównych składowych i analiza skupień są wrażliwe na różnice skali zmiennych, a standaryzacja pozwala wyrównać wpływ każdej zmiennej na obliczenia odległości i wariancji, bez konieczności zakładania normalności rozkładu danych.  
 Nie zdecydowano się natomiast zastosować normalizacji "min-max" (unitaryzacji) lub przekształcenia ilorazowego, gdyż mogłyby niepotrzebnie zmieniać strukturę danych (np. zniekształcać odległości między punktami ujednolicając wpływ zmiennych na odległość), którym porównywalność zapewniła standaryzacja Z-score.
@@ -1470,7 +1483,7 @@ hotel_std$liczba_niemowląt <- hotel_clean$liczba_niemowląt
 ```
 
 :::  {style="text-align: justify;"}
-Finalny zbiór po obróbce zawiera `r nrow(hotel_std)` obserwacji i `r ncol(hotel_std)` zmiennych.
+Finalny zbiór po obróbce zawiera **`r nrow(hotel_std)`** obserwacji i **`r ncol(hotel_std)`** zmiennych.
 :::
 
 # 5. ZASTOSOWANIE METOD WIELOWYMIAROWYCH
@@ -1484,13 +1497,13 @@ W kolejnych krokach przeprowadzono:
 
 1. **Analizę założeń PCA**, opartą o ocenę korelacji między zmiennymi, test Bartletta oraz kryterium KMO,
 
-2.**Dobór liczby składowych** z wykorzystaniem kryterium procentu skumulowanej wariancji, kryterium Keisera oraz kryterium Catella (wykresu osypiska),
+2. **Dobór liczby składowych** z wykorzystaniem kryterium procentu skumulowanej wariancji, kryterium Keisera oraz kryterium Catella (wykresu osypiska),
 
 3. **Interpretację wyników** – przedstawiono ładunki czynnikowe ilustrujące wkład zmiennych w poszczególne wymiary, wizualizację korelacji zmiennych ze składowymi głównymi i wykres udziału zmienności objaśnianej przez składowe (cos²).
 
 Ze względu na dużą liczbę obserwacji (116 661), aby uniknąć overplottingu, zrezygnowano z wizualizacji współrzędnych obserwacji w przestrzeni głównych składowych oraz biplotu.
 
-Do analizy włączono `r length(zmienne_ilosciowe)` zmiennych ilościowych, wybranych z pierwotnego zbioru zawierającego `r ncol(hotel_std)` zmiennych. Pozostałe zmienne, ze względu na charakter jakościowy, nie zostały uwzględnione w procedurze PCA.
+Do analizy włączono **`r length(zmienne_ilosciowe)` zmiennych ilościowych**, wybranych z pierwotnego zbioru zawierającego `r ncol(hotel_std)` zmiennych. Pozostałe zmienne, ze względu na charakter jakościowy, nie zostały uwzględnione w procedurze PCA.
 :::
 
 ### 5.1.1. Sprawdzenie założeń analizy PCA
@@ -1506,14 +1519,15 @@ hotelCorr<-cor(hotel_std[zmienne_ilosciowe])
 
 ggcorrplot(hotelCorr,tl.cex=9,lab=TRUE,lab_size=2.5,p.mat = hotelCorr)
 ```
+
 :::  {style="text-align: justify;"}
-W przedstawionej macierzy korelacji można wydedukować, że istnieją pewne istotne korelacje między zmiennymi w zbiorze.
+W przedstawionej **macierzy korelacji** można wydedukować, że istnieją pewne istotne korelacje między zmiennymi w zbiorze.
 
 
 ***2) Test Bartletta***
 
 :::  {style="text-align: justify;"}
-*H0: Macierz korelacji jest macierzą jednostkową (zmienne nie są skorelowane) - nie ma sensu    wykonywać PCA*
+*H0: Macierz korelacji jest macierzą jednostkową (zmienne nie są skorelowane) - nie ma sensu    wykonywać PCA*  
 *H1: Macierz korelacji nie jest macierzą jednostkową (zmienne są skorelowane) - warto wykonywać redukcję wymiaru, analizę PCA*
 :::
 
@@ -1527,8 +1541,9 @@ cortest.bartlett(hotel_std[zmienne_ilosciowe]) %>%
 ```
 
 :::  {style="text-align: justify;"}
-Na podstawie testu Bartletta i p-value = 0 < alfa = 0,05 odrzucono H0 na rzecz HA stwierdzając, że macierz korelacji badanego zbioru danych ilościowych nie jest macierzą jednostkową, wobec czego warto wkonać redukcję wymiaru.
+Na podstawie **testu Bartletta** i p-value = 0 < alfa = 0,05 odrzucono H0 na rzecz HA stwierdzając, że macierz korelacji badanego zbioru danych ilościowych nie jest macierzą jednostkową, wobec czego warto wkonać redukcję wymiaru.
 :::
+
 
 ***3) Kryterum KMO (Keisera-Meyera-Olkina)***
 
@@ -1545,15 +1560,16 @@ data.frame(
 ```
 
 :::  {style="text-align: justify;"}
-Według ogólnie przyjmowanych progów dla MSA, tj.:
+Według ogólnie przyjmowanych progów dla **MSA**, tj.:
 
-~0.5 - kryterium KMO nie roztrzyga, czy warto wykonywać PCA
+- ~0.5 - kryterium KMO nie roztrzyga, czy warto wykonywać PCA
 
->0.5 - warto wykonywać PCA
+- > 0.5 - warto wykonywać PCA
 
-<0.5 - nie ma sensu wykonywać PCA
+- < 0.5 - nie ma sensu wykonywać PCA
 
-można uznać, że warto wykonać analizę głównych składowych dla analizowanych zmiennych, gdyż wynoszą one w większości wiecej lub blisko 0,5. Potwierdza to również *Overall MSA* wynoszące 0,58.
+można uznać, że **warto** wykonać ***analizę głównych składowych** dla analizowanych zmiennych, gdyż wynoszą one w większości **wiecej** lub **blisko 0,5**.  
+Potwierdza to również *Overall MSA* wynoszące **0,58**.
 :::
 
 ### 5.1.2. Określenie liczby składowych do redukcji
@@ -1572,13 +1588,13 @@ get_eig(pca) %>%
 ```
 
 :::  {style="text-align: justify;"}
-**Skumulowana wariancja procentowa** (> 80%) wskazała, że najkorzystnieszą opcją dla wybranych zmiennych jest zredukowanie ich do `r 4-1` wymiarów.
+**Skumulowana wariancja procentowa** (> 80%) wskazała, że najkorzystnieszą opcją dla wybranych zmiennych jest zredukowanie ich do **`r 4-1` wymiarów*.
 :::
 
 ***2) Kryterium Keisera***
 
 :::  {style="text-align: justify;"}
-**Wartość własna**, zaprezentowana w tabeli *"Kryterium udziału zmienności"* przekracza $*1*$ dla 4 zmiennych, co również sugeruje zastosowanie 3 wymiarów.
+**Wartość własna**, zaprezentowana w tabeli *"Kryterium udziału zmienności"* przekracza *$1$* dla 4 zmiennych, co również sugeruje zastosowanie **3 wymiarów**.
 :::
 
 ***3) kryterium Catella***
@@ -1588,55 +1604,30 @@ fviz_screeplot(pca, addlabels=TRUE)
 ```
 
 :::  {style="text-align: justify;"}
-**Wykres osypiska** natomiast uwidocznił punkt przegięcia w 3 wymiarze - co za tym idzie, według *kryterium Catella* należy zastosować `r 3-1` wymiary.
+**Wykres osypiska** natomiast uwidocznił punkt przegięcia w 3 wymiarze - co za tym idzie, według *kryterium Catella* należy zastosować **`r 3-1` wymiary**.
 :::
 
 :::  {style="text-align: justify;"}
 ***Wniosek***
+
 Na podstawie powyższej analizy uznano, że najbardziej dopasowaną liczbą wymiarów, do których należy zredukować analizowane zmienne to **3**.
 :::
 
 ### 5.1.3. Interpretacja wyników PCA
 
 ```{r ładunki czynnikowe, echo=FALSE}
+# Heatmapa
 pcaVars <- get_pca_var(pca)
 
 ggcorrplot(t(pcaVars$coord[,1:3]),colors = c("#4361ee","white","#e63946"),
            tl.cex=9,lab=TRUE,lab_size=3)
 
-contrib_df <- as.data.frame(pcaVars$contrib[, 1:3])
-contrib_df$Zmienna <- rownames(contrib_df)
-
-contrib_df %>%
-  pivot_longer(
-    cols = starts_with("Dim"),
-    names_to = "Składowa",
-    values_to = "Wkład") %>%
-  ggplot(aes(x = Zmienna, y = Wkład, fill = Składowa)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ Składowa, scales = "free_x") +
-  scale_fill_manual(values = c("Dim.1" = "#e27396",
-                               "Dim.2" = "#5fa8d3", 
-                               "Dim.3" = "#709775")) +
-  geom_hline(yintercept = 10,
-             linetype = "dashed",
-             color = "red") +
-  geom_text(aes(
-    label = paste0(round(Wkład, 1), "%"),
-    hjust = ifelse(Wkład < 5.5, -0.1, 1.1)),
-    size = 2.5) +
-  coord_flip() +
-  labs(title = "Wkład zmiennych w główne składowe PCA",
-       y = "Wkład (%)",
-       x = "") +
-  theme_minimal()
-
-#### propozycja 2
 contrib1 <- fviz_contrib(pca, choice = "var", axes = 1,
                        title = "Wkład zmiennych w Dim.1",
                        fill = "#e27396",
                        color = "#e27396")
 
+# Wykresy słupkowe
 contrib1 +
   ylab("Wkład (%)") +
   geom_text(aes(label = paste0(round(contrib, 1), "%")), 
@@ -1677,7 +1668,7 @@ contrib3 +
 ```
 
 :::  {style="text-align: justify;"}
-Współczynniki korelacji między oryginalnymi zmiennymi a nowo utworzonymi składowymi (**ładunki czynnikowe**) ukazują, które z nich najsilniej (a które najsłabiej) oddziaływały na daną składową główną. O znaczeniu zmiennej decydował jej procentowy wkład w daną składową (> 10%), natomiast znak ładunku określał kierunek zależności.
+***Współczynniki korelacji*** między oryginalnymi zmiennymi a nowo utworzonymi składowymi (**ładunki czynnikowe**) ukazują, które z nich najsilniej (a które najsłabiej) oddziaływały na daną składową główną. O znaczeniu zmiennej decydował jej procentowy wkład w daną składową (> 10%), natomiast znak ładunku określał kierunek zależności.
 
 Najbardziej wpływające na utworzone wymiary zmienne to:
 
@@ -1708,9 +1699,9 @@ Najbardziej wpływające na utworzone wymiary zmienne to:
 
 Wobec powyższego, zróżnicowanie rezerwacji hotelowych opisane zostało za pomocą trzech głównych cech:
 
-> **profil cenowy i preferencje klientów** (pierwsza składowa główna)
-> **planowanie rezerwacji** (druga składowa główna)
-> **elastyczność i długość pobytu w hotelu** (trzecia składowa główna)
+- **profil cenowy i preferencje klientów** (pierwsza składowa główna)  
+- **planowanie rezerwacji** (druga składowa główna)  
+- **elastyczność i długość pobytu w hotelu** (trzecia składowa główna)  
 
 
 Korelację zmiennych oryginalnych z poszczególnymi składowymi głównymi przedstawia poniższa grafika.
@@ -1726,13 +1717,14 @@ fviz_pca_var(pca, axes=c(1,3), repel = TRUE,labelsize=3, col.var = "cos2",
 fviz_pca_var(pca, axes=c(2,3), repel = TRUE, labelsize=3, col.var = "cos2",
              gradient.cols = c("#4da1a9", "#3d348b", "#c9184a"))
 ```
+
 :::  {style="text-align: justify;"}
-Z wykresów korelacji zmeinnych PCA wynika, że pierwsza główna składowa (*Dim1*) wraz z drugą (*Dim2*) łącznie wyjaśniają `r 14.4+17.1`% całkowitej wariancji danych. Uwzględnienie trzeciej składowej (*Dim3*) zwiększa dodatkowo ten odsetek do `r 14.4+17.1+10.9`%. 
+Z **wykresów korelacji zmeinnych PCA** wynika, że pierwsza główna składowa (*Dim1*) wraz z drugą (*Dim2*) łącznie wyjaśniają `r 14.4+17.1`% całkowitej wariancji danych. Uwzględnienie trzeciej składowej (*Dim3*) zwiększa dodatkowo ten odsetek do `r 14.4+17.1+10.9`%. 
 
 Na wykresach widoczne są wyraźne grupy zmiennych o zbliżonych kierunkach wektorów (np. w *Dim1-Dim2* para *wymagane_miejsca_parkingowe* i *liczba_specjalnych_próśb*, czy w *Dim2-Dim3* para *średnia_cena_za_noc* oraz *liczba_osób*), co wskazuje na ich dodatnią korelację, oraz zmienne skierowane przeciwnie (np. w *Dim1-Dim3* para *liczba_specjalnych_próśb* i *wcześniejsze_odwołania*), świadczące o ich ujemnym powiązaniu. Długość wektorów natomiast potwierdza, że zmienne wskazane wcześniej jako istotne dla poszczególnych wymiarów są właściwie przedstawiane w przestrzeni głównych składowych.
 :::
 
-```{r wykres objaśniania zmienności przez wymiary}
+```{r wykres objaśniania zmienności przez wymiary, echo=FALSE}
 # Wyświetlenie zasobów zmienności wspólnej w celu sprawdzenia jaka część zmienności danej zmiennej była wyjaśniana przez kolejne składowe
 
 cos2_1 <- fviz_cos2(pca, choice = "var", axes = 1,
@@ -1813,7 +1805,7 @@ W kolejnych etapach dokonano:
 
 *Z uwagi na bardzo dużą liczebność zbioru danych, obliczenia znajdujące się w tym kroku zostały przeprowadzone na losowej próbie obejmującej 5000 oraz 10 000 obserwacji. Sprwadzenie do prób było konieczne, ponieważ funkcje służące do wyznaczania miar jakości klasteryzacji wymagają tworzenia dużych macierzy odległości, których obliczenie dla pełnego zbioru przekraczało możliwości obliczeniowe programu R. Dodatkowo podjęto próbę wykorzystania pakietu NbClust, jednak nawet po ograniczeniu liczby obserwacji funkcja ta nie zadziałała poprawnie z uwagi na zbyt dużą złożoność obliczeń.*
 
-*Nie użyto również głównych składowych wytypowanych przez analizę PCA, które zredukowały wymiar zbioru ze względu na fakt, że objaśniła ona mniej niż 70% wariancji zmienności danych.*
+*Nie użyto również głównych składowych wytypowanych przez analizę PCA, które zredukowały wymiar zbioru ze względu na fakt, że objaśniła ona mniej niż 50% wariancji zmienności danych.*
 
 ```{r Próbka, include=FALSE}
 # Definowanie losowej próbki ze zbioru hotel_std
@@ -1833,15 +1825,11 @@ hotel_sample_10 <- readRDS("hotel_sample_10.rds")
 ***1) Metoda łokciowa WSS (Elbow Method)***
 
 ::: {style="text-align: justify;"}
-Pierwsza z trzech obiektywnych metod wyboru liczby skupień jest *metoda łokciowa*, która polega na analizie zmiany sumy kwadratów odległości wewnątrz skupień (WSS) w zależności od liczby klastrów.  
+Pierwsza z trzech obiektywnych metod wyboru liczby skupień jest **metoda łokciowa**, która polega na analizie zmiany sumy kwadratów odległości wewnątrz skupień *(WSS)* w zależności od liczby klastrów.  
 Optymalną liczbę skupień wybiera się w miejscu, w którym dalsze zwiększanie liczby klastrów nie powoduje już istotnego zmniejszenia się wewnętrznego zróżnicowania danych *(WSS)*.
 :::
 
 ```{r metoda łokciowa, echo=FALSE}
-library(NbClust) 
-library(factoextra)
-library(cluster)
-
 # Wyznaczenie sumy kwadratów odchyleń wewnątrz skupień (WSS) dla kolejnych wartości liczby klastrów
 # + zwiększenie inicjacji wyników w celu zwiększenia ich stabilności
 
@@ -1855,7 +1843,7 @@ fviz_nbclust(hotel_sample_10, FUN = kmeans, method = "wss", nstart = 5) + labs(t
 ```
 
 ::: {style="text-align: justify;"}
-Analiza *wykresu łokcia*, na podstawie próbki liczącej 5 tys. oraz 10 tys. obserwacji nie wskazała okreslonej liczby klastrów, która byłaby najlepsza do grupowania wartości zmiennych ilosciowych w badanym zbiorze. Oba wykresy zostały wygładzone i nie uwidaczniają wyraźnego zaprzestania spadku wewnętrznego zróżnicowania danych. 
+Analiza **wykresu łokcia**, na podstawie próbki liczącej 5 tys. oraz 10 tys. obserwacji nie wskazała okreslonej liczby klastrów, która byłaby najlepsza do grupowania wartości zmiennych ilosciowych w badanym zbiorze. Oba wykresy zostały wygładzone i nie uwidaczniają wyraźnego zaprzestania spadku wewnętrznego zróżnicowania danych. 
 
 Wobec tego, tę metodę wyznaczania optymalnej liczby skupień uznano za nieistotną i przystąpiono do dalszej analizy przy pomocy indeksu sylwetkowego oraz statystyki GAP. 
 :::
@@ -1864,7 +1852,7 @@ Wobec tego, tę metodę wyznaczania optymalnej liczby skupień uznano za nieisto
 ***2) Indeks sylwetkowy (Silhouette Index)***
 
 ::: {style="text-align: justify;"}
-Drugą metodą jest *indeks sylwetkowy*, który mierzy jakość przypisania obserwacji do skupień, porównując podobieństwo obiektów wewnątrz klastra z ich odległością od innych klastrów.  
+Drugą metodą jest **indeks sylwetkowy**, który mierzy jakość przypisania obserwacji do skupień, porównując podobieństwo obiektów wewnątrz klastra z ich odległością od innych klastrów.  
 Optymalna liczba skupień odpowiada maksymalnej średniej wartości *indeksu sylwetki*.
 :::
 
@@ -1881,23 +1869,22 @@ fviz_nbclust(hotel_sample_10, FUN = kmeans, method = "silhouette", nstart = 5) +
 ```
 
 ::: {style="text-align: justify;"}
-*Wykres skupiska* dla każdej z próbek wskazał różne wyniki efektywnego przypisania liczby skupisk dla analizowanych danych.
+**Wykres skupiska** dla każdej z próbek wskazał różne wyniki efektywnego przypisania liczby skupisk dla analizowanych danych.
 
 Dla próbki o liczebności 5 tys. obserwacji zostało wskazanych **6 klastrów** jako najbardziej optymalnych. Dla próbki z 10 tys. wartości były to natomiast **2 klastry**.
 
-Wniosek z analizy *Silhouette Index* jest taki, że im większa jest liczebność próbki pobranej z oryginalnego zbioru danych *(hotel_std)*, tym mniejsza liczba klastrów jest uznawana za najbardziej efektywną i dopasowaną.
-Co za tym idzie - uznano, że 2-6 (ok. 4 klastry) są najodpowiedniejszą liczbą skupisk do analizy k-means.
+Wniosek z analizy ***Silhouette Index*** jest taki, że im większa jest liczebność próbki pobranej z oryginalnego zbioru danych *(hotel_std)*, tym mniejsza liczba klastrów jest uznawana za najbardziej efektywną i dopasowaną.
+Co za tym idzie - uznano, że **2-6 (ok. 4 klastry)* są najodpowiedniejszą liczbą skupisk do analizy k-means.
 :::
 
 ***1) Statystyka GAP (GAP Statistic)***
 
 ::: {style="text-align: justify;"}
-Ostatnią, trzecią metodą sprawdzania najodpowiedniejszej liczby klastrów do analizy skupień jest *statystyka GAP* porównująca jakość grupowania, która została uzyskana dla danych rzeczywistych z jakością grupowania dla danych losowych o tej samej strukturze.  
+Ostatnią, trzecią metodą sprawdzania najodpowiedniejszej liczby klastrów do analizy skupień jest **statystyka GAP** porównująca jakość grupowania, która została uzyskana dla danych rzeczywistych z jakością grupowania dla danych losowych o tej samej strukturze.  
 Optymalna liczba skupień to taka, dla której wartość *statystyki GAP* jest największa.
 :::
 
-```{r statystyka GAP, message=FALSE, warning=FALSE}
-library(cluster)
+```{r statystyka GAP, echo=FALSE, message=FALSE, warning=FALSE}
 # Porównanie jakości klasteryzacji dla danych rzeczywistych z wynikami uzyskanymi dla wygenerowanych 10 zbiorów losowych (referencyjnych) (B=10)
 
 ## Próba 5 000 obserwacji
@@ -1926,25 +1913,27 @@ knitr::include_graphics("GAP_statistic_sample10.png")
 
 
 ::: {style="text-align: justify;"}
-Wizualizacje prezentują wykres *statystyki GAP* dla próbki o liczebności 5 tys. oraz 10 tys. obserwacji, przy 5 inicjacjach algorytmu k-średnich oraz ograniczeniu liczby symulacji danych do oceny istotności do 10 (domyślnie 100).
+Wizualizacje prezentują wykres **statystyki GAP** dla próbki o liczebności 5 tys. oraz 10 tys. obserwacji, przy 5 inicjacjach algorytmu k-średnich oraz ograniczeniu liczby symulacji danych do oceny istotności do 10 (domyślnie 100).
 
 Przez wzgląd na złożoność obliczeń przy wyznaczaniu *statystyki GAP*, a co za tym idzie - wydłużony czas oczekiwania na wyświetlanie wizualizacji dla próbki, zdecydowano się ująć wyniki słownie:
 
-- s*tatystyka GAP* na próbce 10 tys. obserwacji, 5 inicjacjach oraz 10 symulacjach danych referencyjnych wskazuje **1 klaster** jako optymalny do użycia w dalszej analizie,
+- *statystyka GAP* na próbce 10 tys. obserwacji, 5 inicjacjach oraz 10 symulacjach danych referencyjnych wskazuje **1 klaster** jako optymalny do użycia w dalszej analizie,
 - *statystyka GAP* na próbce 10 tys. obserwacji, domyślnej, 1 liczbie inicjacji oraz 10 symulacjach wskazuje **1 klaster** ,
 - *statystyka GAP* na próbce 5 tys. obserwacji, 5 inicjacjach oraz 10 symulacjach wskazuje **5 klastrów**,
 - *statystyka GAP* na próbce 5 tys. obserwacji, 1 liczbie inicjacji oraz 10 symulacjach wskazuje **10+ klastrów** 
 
-Wnioskując - *statystyka GAP* w danym przypadku nie jest jednoznaczna we wskazaniu optymalnej liczby klastrów. Zauważyć jednak można, że podobnie jak w przypadku indeksu sylwetkowego - im liczniejsza była próbka pobrana z danych *(hotel_std)* i im większy był ustalony poziom interacji, tym statystyka wskazywała coraz mniejszą liczbę klastrów.  
-Uznano więc, że liczebność grup, na podstawie statsytyki GAP powinna zawierać się między 2-5 klastrów (3 lub 4 skupiska).
+Wnioskując - **statystyka GAP** w danym przypadku nie jest jednoznaczna we wskazaniu optymalnej liczby klastrów. Zauważyć jednak można, że podobnie jak w przypadku indeksu sylwetkowego - im liczniejsza była próbka pobrana z danych *(hotel_std)* i im większy był ustalony poziom interacji, tym statystyka wskazywała coraz mniejszą liczbę klastrów.  
+Uznano więc, że liczebność grup, na podstawie *statsytyki GAP* powinna zawierać się między **2-5 klastrów (3 lub 4 skupiska)**.
 
 
 ***WNIOSEK***
+
 Przeprowadzona przy użyciu powyższych metod analiza optymalnej liczby klastrów do dalszej analizy **k-średnich** nie przyniosła jednoznacznych rezultatów i wykazała niejdenorodne, trudne do interpretacji wyniki. Główną przyczyną tego problemu było przeprowadzone próbkowanie obserwacji (5 tys. i 10 tys.), ze względu na zbyt obciążeniową program analityczny liczebność zbioru danych (ponad 119 tys. obserwacji).
-Wobec tego:
-- *metoda WSS* **nie wskazała żadnego** najefektywniejszego skupiska obserwacji, który byłby odpowiedni do dalszej analizy,
-- *indeks sylwetkowy* wskazał dwa potencjalnie istotne klastry: **2** i **6**,
-- *statystyka GAP* określiła **1** lub **5 klastrów** jako potencjalnie optymalne miejsca grupowanie się klastrów. 
+
+Wobec tego:  
+- *metoda WSS* **nie wskazała żadnego** najefektywniejszego skupiska obserwacji, który byłby odpowiedni do dalszej analizy,  
+- *indeks sylwetkowy* wskazał dwa potencjalnie istotne klastry: **2** i **6**,  
+- *statystyka GAP* określiła **1** lub **5 klastrów** jako potencjalnie optymalne miejsca grupowanie się klastrów.   
 
 Przyjęto zatem liczbę **4 klastrów** za najbardziej dopasowaną do analizowanych danych.
 :::
@@ -1962,13 +1951,10 @@ hotel_k4 <- kmeans(hotel_std[zmienne_ilosciowe], centers = 4, nstart = 25)
 ```
 
 ::: {style="text-align: justify;"}
-Po przeprowadzeniu klasteryzacji metodą *k-średnich* dla 4 skupień uzyskano łączną sumę kwadratów wewnątrz klastrów *(tot.withinss)* równą `r hotel_k4$tot.withinss`, sumę kwadratów między klastrami *(betweenss)* równą `r hotel_k4$betweenss` oraz całkowitą sumę kwadratów *(totss)* na poziomie `r hotel_k4$totss`. Oznacza to, że około `r round(hotel_k4$betweenss/hotel_k4$totss, 2)`% całkowitej wariancji danych zostało wyjaśnione przez różnice między klastrami, natomiast pozostała część wynika ze zróżnicowania wewnątrz skupień.
+Po przeprowadzeniu klasteryzacji metodą **k-średnich** dla 4 skupień uzyskano łączną sumę kwadratów wewnątrz klastrów *(tot.withinss)* równą `r round(hotel_k4$tot.withinss, 4)`, sumę kwadratów między klastrami *(betweenss)* równą `r round(hotel_k4$betweenss, 4)` oraz całkowitą sumę kwadratów *(totss)* na poziomie `r round(hotel_k4$totss, 4)`. Oznacza to, że około **`r round(hotel_k4$betweenss/hotel_k4$totss, 2)`% całkowitej wariancji** danych zostało wyjaśnione przez różnice między klastrami, natomiast pozostała część wynika ze zróżnicowania wewnątrz skupień.
 :::
 
 ```{r centroidy klastrów, echo=FALSE}
-library(ggplot2)
-library(reshape2)
-
 # Wyznaczanie macierzy centrów klastrów z obiektu k-means i zmaiana jej na ramkę danych
 k_centers <- as.data.frame(hotel_k4$centers)
 
@@ -1992,24 +1978,24 @@ k_centers %>%
 ```
 
 ::: {style="text-align: justify;"}
-Średnie wartości zmiennych dla każdego klastra pokazują, jak poszczególne zmienne różnią się między grupami.  
+**Średnie wartości zmiennych** dla każdego klastra pokazują, jak poszczególne zmienne różnią się między grupami.  
 Mapa ciepła pozowliła w prosty sposób zobczać zależności w klastrach, tzn. które zmienne są wyższe lub niższe w danym klastrze: bordowe pola oznaczają wartości powyżej średniej, niebieskie - poniżej średniej, a białe - wartości zbliżone do średniej.
 
 Na podstawie tych średnich możemy opisać charakterystyki poszczególnych klastrów:
 
-***Klaster 1.***
+***Klaster 1.***  
 Klaster ten posiada wyraźnie wysokie wartości w zmiennych: *wcześniejsze_odwołania* (2,93), *liczba_dni_na_liście_oczekujących* (1,95) oraz *czas_wprzedzenia_rezerwacji* (0,92).
-można więc sądzić, że skupia on klientów, którzy planują swoje pobyty w hotelu z dużym wyprzedzeniem. Charakteryzują się oni dłuższym niż przeciętnie okresem czasu, jaki upływa od momentu dokonania rezerwacji pokoju do planowanego przyjazdu, a co się z tym wiąże - długim okresem przebywania na liście oczekujących, a także dużą liczbą wcześniejszych rezerwacji i ich odwołań. Sugeruje to, że są to osoby często rezerwujące noclegi, ale jednocześnie skłonne do zmiany planów. 
+można więc sądzić, że skupia on klientów, którzy planują swoje pobyty w hotelu z dużym wyprzedzeniem. Charakteryzują się oni dłuższym niż przeciętnie okresem czasu, jaki upływa od momentu dokonania rezerwacji pokoju do planowanego przyjazdu, a co się z tym wiąże - długim okresem przebywania na liście oczekujących, a także dużą liczbą wcześniejszych rezerwacji i ich odwołań. Sugeruje to, że są to osoby często rezerwujące noclegi, ale jednocześnie skłonne do zmiany planów.  
 Pozostałe zmienne mają wartości średnie lub niższe od średniej, więc nie wyróżniają tej grupy.
 
-***Klaster 2.***
+***Klaster 2.***  
 Klienci należący do tego klastra wyróżniają się wysokim zapotrzebowaniem na miejsca parkingowe *(wymagane_miejsca_parkingowe: 3,84)*. Może to wskazywać, że często podróżują oni samochodem, stąd też większe znaczenie ma dla nich dostępność parkingu przy wyborze noclegu.  
 Pod względem pozostałych analizowanych zmiennych ich zachowanie jest zbliżone do przeciętnego, co sugeruje, że są to typowi goście, z tylko jednym, dodatkowym wymaganiem.
 
-***Klaster 3.***
+***Klaster 3.***  
 Klaster trzeci obejmuje rezerwacje potencjalnie liczniejsze i o wyższym standardzie. Charakteryzowni przez niego klienci podróżują w większych grupach *(liczba_osób: 0,65)*, składają więcej specjalnych próśb *(liczba_specjalnych_próśb: 0,81)* oraz decydują się na noclegi o wyższej cenie *(średnia_cena_za_noc: 0,75)*. Może to wskazywać na rodziny, grupy zorganizowane lub gości o podwyższonych oczekiwaniach co do jakości usług.
 
-***Klaster 4.***
+***Klaster 4.***  
 Ostatni klaster reprezentuje najbardziej przeciętnych klientów, bez wyraźnych oczekiań ani szczególnych preferencji dotyczących warunków pobytu. Wszystkie analizowane zmienne przyjmują tu wartości bliskie średniej lub nieco niższe, co oznacza brak wyraźnych cech charakterystycznych. 
 Klaster ten więc odzwierciedla zachowania standardowych klientów, stanowiąc punkt odniesienia dla pozostałych grup.
 :::
@@ -2026,7 +2012,7 @@ fviz_cluster(hotel_k4, data = hotel_std[zmienne_ilosciowe], geom = "point")
 ```
 
 ::: {style="text-align: justify;"}
-Wizualizacja wyników klasteryzacji z wykorzystaniem metody *k-średnich* dla 4 klastrów wskazuje na uzasadnioną segmentację obserwacji. Większość skupień tworzy widoczne grupy, odpowiadające poszczególnym klastrom, co sugeruje, że dane dają się racjonalnie segmentować. Chociaż niektóre klastry częściowo nakładają się na siebie, jest to spodziewany efekt, ponieważ wynika on z wielowymiarowego charakteru danych, gdzie część obserwacji posiada zbliżone wartości w różnych wymiarach. Widoczna jest jednak struktura klastrów, która potwierdza istnienie zróżnicowanych profili rezerwacji, a zastosowanie metody *k-means* można uznać za uzasadnione i efektywne w kontekście analizowanego zbioru.  
+Wizualizacja wyników klasteryzacji z wykorzystaniem metody **k-średnich** dla 4 klastrów wskazuje na uzasadnioną segmentację obserwacji. Większość skupień tworzy widoczne grupy, odpowiadające poszczególnym klastrom, co sugeruje, że dane dają się racjonalnie segmentować. Chociaż niektóre klastry częściowo nakładają się na siebie, jest to spodziewany efekt, ponieważ wynika on z wielowymiarowego charakteru danych, gdzie część obserwacji posiada zbliżone wartości w różnych wymiarach. Widoczna jest jednak struktura klastrów, która potwierdza istnienie zróżnicowanych profili rezerwacji, a zastosowanie metody *k-means* można uznać za uzasadnione i efektywne w kontekście analizowanego zbioru.  
 
 **Klaster 2** ***(zielony)*** wykazuje największą rozpiętość i obejmuje obserwacje o bardziej zróżnicowanych profilach, podczas gdy **klaster 4** ***(fioletowy)*** tworzy stosunkowo zwartą grupę, co sugeruje spójność zachowań w tej grupie. **Klaster 1** ***(czerwony)*** i **klaster 3** ***(niebieski)*** również tworzą rozpoznawalne obszary, z lekkim nakładaniem się z innymi skupiskami, co może odzwierciedlać pewne wspólne cechy między grupami klientów.  
 Wykres klasteryzacji zatem zachowuje wszystkie własności, które wytypowano przy omawianiu centroidów poszczególlnych z grup.
@@ -2043,7 +2029,6 @@ hotel_centers <- as.data.frame(aggregate(.~Group, data = hotel_group, FUN = mean
 hotel_group$Group <- as.factor(hotel_group$Group)
 
 # Wizualizacja klastrów na wykresie - "zmienna" vs "zmienna"
-library(ggpubr)
 ggscatter(x = "średnia_cena_za_noc", y = "czas_wyprzedzenia_rezerwacji", color = "Group", data = hotel_group)
 
 # Wyświetlanie zapisanych wizualizacji
@@ -2051,7 +2036,7 @@ ggscatter(x = "średnia_cena_za_noc", y = "czas_wyprzedzenia_rezerwacji", color 
 ```
 
 ::: {style="text-align: justify;"}
-Do wizualizacji klastrów wybrano zmienne *średnia_cena_za_noc* oraz *czas_wyprzedzenia_rezerwacji*, które najlepiej różnicują hotele pod względem standardu i zachowań rezerwacyjnych klientów. Średnia cena odzwierciedla profil cenowy hotelu, natomiast czas wyprzedzenia pokazuje, w jaki sposób klienci planują pobyt.
+Do wizualizacji klastrów wybrano zmienne ***średnia_cena_za_noc*** oraz ***czas_wyprzedzenia_rezerwacji***, które najlepiej różnicują hotele pod względem standardu i zachowań rezerwacyjnych klientów. Średnia cena odzwierciedla profil cenowy hotelu, natomiast czas wyprzedzenia pokazuje, w jaki sposób klienci planują pobyt.
 
 Na wykresie można zauważyć, że pokoje o niższej średniej cenie (do 100 zł/noc) rezerwują głównie goście należący do **4. klastra**, czyli przeciętni klienci hotelu. Wśród nich znajdują się osoby reprezentujące zachowania **klastra 1.**, co sugeruje, że goście, którzy planują pobyt wcześniej, zapewniają sobie wybór hotelu i pokoju w niższej cenie.
 
@@ -2061,11 +2046,50 @@ W segmencie średnich i wyższych cen punkty są bardziej rozproszone, co pokazu
 
 # 5. Wnioski z analizy
 
+::: {style="text-align: justify;"}
+***Analiza głównych składowych (PCA)*** pozwoliła na istotne uproszczenie zbioru danych, redukując wymiar z wielu zmiennych ilościowych do trzech głównych składowych. **Pierwsza składowa** opisywała profil cenowy i preferencje klientów, **druga** planowanie rezerwacji, a **trzecia** elastyczność i długość pobytu. Dzięki temu możliwe stało się wyodrębnienie najważniejszych cech charakteryzujących rezerwacje hotelowe przy zachowaniu większości informacji o zmienności danych.
+
+Przeprowadzone testy wstępne, w tym *test Bartletta* i *kryterium KMO*, potwierdziły zasadność stosowania PCA, a analiza *procentu skumulowanej wariancji* oraz *wykres osypiska* wskazały trzy najbardziej znaczące wymiary. Interpretacja ładunków czynnikowych pozwoliła zidentyfikować zmienne o największym wpływie na poszczególne składowe, co ułatwiło zrozumienie, jakie aspekty rezerwacji odgrywają kluczową rolę w zachowaniach klientów. Wykresy korelacji zmiennych ze składowymi głównymi dodatkowo pokazały powiązania między zmiennymi i ich znaczenie w opisie całego zbioru.
+
+Wyniki **analizy PCA** podsumowuje poniższa wizualizacja.
+:::
+
+```{r wkład PCA, echo=FALSE}
+contrib_df <- as.data.frame(pcaVars$contrib[, 1:3])
+contrib_df$Zmienna <- rownames(contrib_df)
+
+contrib_df %>%
+  pivot_longer(
+    cols = starts_with("Dim"),
+    names_to = "Składowa",
+    values_to = "Wkład") %>%
+  ggplot(aes(x = Zmienna, y = Wkład, fill = Składowa)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ Składowa, scales = "free_x") +
+  scale_fill_manual(values = c("Dim.1" = "#e27396",
+                               "Dim.2" = "#5fa8d3", 
+                               "Dim.3" = "#709775")) +
+  geom_hline(yintercept = 10,
+             linetype = "dashed",
+             color = "red") +
+  geom_text(aes(
+    label = paste0(round(Wkład, 1), "%"),
+    hjust = ifelse(Wkład < 5.5, -0.1, 1.1)),
+    size = 2.5) +
+  coord_flip() +
+  labs(title = "Wkład zmiennych w główne składowe PCA",
+       y = "Wkład (%)",
+       x = "") +
+  theme_minimal()
+```
+
+::: {style="text-align: justify;"}
+***Analiza skupień metodą k-średnich*** umożliwiła podział obserwacji na **cztery grupy**, różniące się profilami klientów i ich preferencjami. Każdy klaster miał charakterystyczne cechy - od osób planujących pobyt z dużym wyprzedzeniem **(klaster 1.)**, przez gości wymagających konkretnych udogodnień **(klaster 2. i 3.)**, po klientów podróżujących w większych grupach **(klaster 3.)** i standardowych gości **(klaster 4.)**. *Analiza centrów klastrów* i wizualizacje wykazały, że grupy te są wyraźnie rozróżnialne i odzwierciedlają realne wzorce zachowań rezerwacyjnych.
+
+**Analizę skupień** podsumowauje wizualizacja *wykresu radarowego*.
+:::
 
 ```{r wykres radarowy - k-means, echo=FALSE}
-library(fmsb)
-library(scales)
-
 # Wizualizacja centroidów zmiennych w poszczególnych klastrach
 radar_data <- rbind(
   apply(k_centers, 2, max),
@@ -2094,3 +2118,11 @@ legend("topright", legend = paste0("Klaster ", clusters),
 #knitr::include_graphics("Wykres_radar.png")
 ```
 
+::: {style="text-align: justify;"}
+Połączenie wyników PCA z klasteryzacją pozwala zauważyć, że główne składowe dobrze odzwierciedlają czynniki, które różnicują poszczególne grupy klientów. Na przykład, pierwsza składowa, związana z profilem cenowym, koreluje z klastrami obejmującymi większe grupy i rezerwacje droższe, a druga składowa, opisująca planowanie rezerwacji, odpowiada grupom planującym pobyt z dużym wyprzedzeniem. Takie powiązanie pokazuje, że wybrane wymiary w PCA mają praktyczne znaczenie w segmentacji klientów.
+
+Wnioski z obu analiz wskazują, że zbiór danych jest wielowymiarowy, ale jednocześnie uporządkowany, a obserwacje można efektywnie grupować według istotnych cech. Segmentacja klientów daje możliwość lepszego zrozumienia ich zachowań oraz planowania działań marketingowych lub ofert dopasowanych do potrzeb różnych grup. Zarówno PCA, jak i klasteryzacja, ułatwiają wyodrębnienie najważniejszych informacji i wspierają podejmowanie decyzji w oparciu o dane.
+
+
+***Podsumowując, zastosowanie metod wielowymiarowych pozwoliło w sposób spójny i przejrzysty zredukować złożoność danych, a jednocześnie wyodrębnić charakterystyczne profile klientów hotelu. Obie metody – PCA i k-means – uzupełniają się wzajemnie, dając pełniejszy obraz zróżnicowania rezerwacji i preferencji klientów. Wyniki analiz mogą służyć do celów badawczych, ale także do praktycznych decyzji dotyczących zarządzania ofertą hotelową i planowania usług dopasowanych do różnych segmentów gości.***
+:::
