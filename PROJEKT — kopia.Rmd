@@ -686,47 +686,10 @@ korelacji.
 :::
 
 ### 2.3.1. Testy istotności korelacji
-
+::: {style="text-align: justify;"}
 H0: Nie istnieje istotna statystycznie korelacja pomiędzy porównywanymi zmiennymi (r = 0).
 HA: Istnieje istotna statystycznie korelacja pomiędzy porównywanymi zmiennymi (r ≠ 0).
-
-```{r istotność korelacji, echo=FALSE}
-cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
-cat("\n2.1. Test istotności korelacji zmiennych liczba nocy weekendowych oraz liczba nocy tygodniowych:\n")
-cor_test_results2 <- cor.test(hotel$liczba_nocy_weekendowych, hotel$liczba_nocy_tygodniowych)
-cat("r =", round(cor_test_results2$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
-
-cat("\n2.2. Test istotności korelacji zmiennych liczba specjalnych próśb oraz odwołanie rezerwacji:\n")
-cor_test_results2 <- cor.test(hotel$liczba_specjalnych_próśb, hotel$odwołanie_rezerwacji)
-cat("r =", round(cor_test_results2$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
-
-cat("\n2.3. Test istotności korelacji zmiennych wymagane miejsca parkingowe oraz odwołanie rezerwacji:\n")
-cor_test_results2 <- cor.test(hotel$wymagane_miejsca_parkingowe, hotel$odwołanie_rezerwacji)
-cat("r =", round(cor_test_results2$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
-
-cat("\n2.4. Test istotności korelacji zmiennych czas wyprzedzenia rezerwacji oraz odwołanie rezerwacji:\n")
-cor_test_results2 <- cor.test(hotel$czas_wyprzedzenia_rezerwacji, hotel$odwołanie_rezerwacji)
-cat("r =", round(cor_test_results2$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
-
-cat("\n2.5. Test istotności korelacji zmiennych wcześniejsze odwołania oraz odwołanie rezerwacji:\n")
-cor_test_results2 <- cor.test(hotel$wcześniejsze_odwołania, hotel$odwołanie_rezerwacji)
-cat("r =", round(cor_test_results2$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
-
-cat("\n2.6. Test istotności korelacji zmiennych liczba zmian rezerwacji oraz odwołanie rezerwacji:\n")
-cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_rezerwacji)
-cat("r =", round(cor_test_results2$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
-
-cat("\n2.7. Test istotności korelacji zmiennych powracający_gość, oraz odwołanie rezerwacji:\n")
-cor_test_results2 <- cor.test(hotel$powracający_gość, hotel$odwołanie_rezerwacji)
-cat("r =", round(cor_test_results2$estimate, 3), "\n")
-cat("p-value =", round(cor_test_results2$p.value, 5), "\n")
-```
+:::
 
 1. Test istotności korelacji zmiennych *liczba_nocy_weekendowych* oraz *liczba_nocy_tygodniowych*:
 ```{r testy istotności korelacji 1, include=FALSE}
