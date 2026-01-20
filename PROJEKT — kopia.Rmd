@@ -1209,7 +1209,7 @@ Zmienne takie, jak *liczba_niemowląt*, *liczba_zmian_rezerwacji*, *wcześniejsz
 Pozostałe zmienne o umiarkowanej skośności i niższej statystyce Cooka (*liczba_dzieci*, *liczba_specjalnych_próśb*, *liczba_nocy_weekendowych*, *liczba_nocy_tygodniowych*, *liczba_dorosłych*, *czas_wyprzedzenia_rezerwacji*, *wcześniejsze_odwołania*, *liczba_zmian_rezerwacji*, *wymagane_miejsca_parkingowe*), były poddane jedynie ograniczeniu wynikającemu z ewentualnego przekroczenia progu $4/n$ dla statystyki Cooka ($D$). Przez wzgląd na fakt, że ich wartości i zakres nie stwarzały jednak ryzyka nadmiernego wpływu pojedynczych obserwacji na analizę wielowymiarową, nie zastosowano dla nich innych, celowych modyfikacji mających na celu spłaszczenie bądź ograniczenie zakresu ich wartości. Dzięki temu zachowano maksymalną informacyjność tych zmiennych, jednocześnie minimalizując wpływ ekstremów w najbardziej krytycznych kolumnach.
 :::
 
-### 3.2.5. Podsumowanie wartości zmiennych po pszekształceniach
+### 3.2.5. Podsumowanie wartości zmiennych po przekształceniach
 
 ```{r Sprawdzanie obsługi wartości odstających 1, echo=FALSE}
 # Boxploty zmiennych ilościowych
@@ -1251,7 +1251,7 @@ for (var in vars_changed) {
 ```
 
 :::  {style="text-align: justify;"}
-**INTERPRETACJEl**
+**INTERPRETACJE:**
 *1. Średnia cena za noc*
 Na pierwszym wykresie widać, jak ekstremalne wartości odstające przekraczające 5000 jednostek całkowicie zniekształciły skalę i uniemożliwiły analizę rozkładu. Po usunięciu tych błędnych lub nietypowych rekordów, skala osi Y uległa znacznemu zawężeniu, co pozwoliło na wyraźne przedstawienie struktury cenowej z medianą oscylującą w okolicach 95 jednostek. Dzięki temu zabiegowi dane stały się czytelne, ujawniając, że większość cen mieści się w przedziale od 70 do 125, podczas gdy pozostałe wartości powyżej 200 stanowią już tylko nieliczne i łatwe do zidentyfikowania punkty.
 
@@ -1292,7 +1292,11 @@ data.frame(
   formatStyle('zmienna', target = 'row', backgroundColor = styleEqual(vars_changed, rep('#d1e7dd', length(vars_changed))))
 ```
 
-opis
+:::  {style="text-align: justify;"}
+Powyższy kod prezentuje porównanie statystyk opisowych zmiennych ilościowych przed i po ich przekształceniu. W pierwszym kroku wyświetlana jest tabela zawierająca statystyki dla danych przed czyszczeniem. Następnie dla zbioru bez outlierów obliczane są podstawowe miary statystyczne. Zaprezentowano je w drugiej tabeli jako dane po przetworzeniu. Dodatkowo w tabeli końcowej wizualnie wyróżnione zostają wiersze odpowiadające zmiennym, które uległy zmianie podczas procesu czyszczenia danych.
+
+Po usunięciu wartości odstających zmieniły się kluczowe miary statystyczne zmiennych ilościowych. Wartości minimalne i maksymalne zostały zredukowane do realistycznych granic, co sprawiło, że średnie i odchylenia standardowe stały się bardziej reprezentatywne dla większości obserwacji. Mediany i kwartyle pozostały względnie stabilne, natomiast zakresy międzykwartylowe lepiej oddają naturalne zróżnicowanie danych, bez zaburzeń spowodowanych ekstremalnymi rekordami. Dzięki temu rozkłady zmiennych stały się czytelniejsze, a interpretacja wyników bardziej wiarygodna.
+:::
 
 ```{r Sprawdzanie obsługi wartości odstających 2, echo=FALSE}
 # Tabela podsumowująca - skośność "przed" i "po" usunięciu wartości odstających
@@ -1316,9 +1320,11 @@ skew_compare %>%
     caption = "Sprawdzenie parametru skośności po obsłudze elementów odstających") %>%
   formatRound("poprawa_p.%", 2)
 ```
+:::  {style="text-align: justify;"}
+Powyższa tabela porównująca **skośność zmiennych ilościowych przed i po usunięciu wartości odstających** oblicza dla każdej zmiennej skośność w oryginalnym zbiorze i w oczyszczonym. Następnie wylicza różnicę w wartościach bezwzględnych, pokazując, jak bardzo rozkład zbliżył się do symetrii. Wyniki wyświetlano w formie tabeli, w której wyróżniono w jakim procencie uległ poprawie parametr skośności po edycji danych.
 
-opis
-
+Największej poprawie uległa zmienna *wcześniejsze_odwołania* (20,54%), *liczba_dorosłych* (17,81%) oraz *wcześniejsze_rezerwacje_nieodwołane* (16,74%). Dla pozostałych zmiennych zmiana jest niewielka lub nawet ujemna – np. *liczba_dzieci* (-0,34%). Mimo to przeprowadzona obsługa wartości odstających jest uzasadniona, ponieważ zapewnia spójność metodologiczną i minimalizuje potencjalne zakłócenia w dalszych analizach.
+:::
 
 # 4. Obróbka zmiennych
 ## 4.1. Tworzenie nowych zmiennych
