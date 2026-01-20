@@ -26,6 +26,8 @@ library(naniar)
 library(moments)
 library(ggcorrplot)
 library(factoextra)
+library(NbClust) 
+library(cluster)
 ```
 
 # 1. Wprowadzenie
@@ -871,7 +873,6 @@ Wartości NA stanowią:
 
 - niecałe 14% obserwacji zmiennej *agent_rezerwacji*.
 
-
 W dalszej części pracy zostanie omówione podejście do ich uzupełnienia
 oraz odpowiednia „obróbka” braków danych, uwzględniająca charakter
 poszczególnych zmiennych i wpływ na analizę.
@@ -1164,7 +1165,6 @@ Aby ograniczyć wpływ obserwacji odstających na wariancję i odległości mię
 W konsekwencji usunięto `r removed` obserwacji (`r round(removed/n_before*100, 2)`%) o najwyższym wpływie na dopasowanie modelu.
 :::
 
-
 ### 3.2.2. Winsoryzacja
 
 ::: {style="text-align: justify;"}
@@ -1226,7 +1226,6 @@ Dla zmiennych o szerokim zakresie wartości i wyraźnych wartościach skrajnych 
 Metoda percentylowa pozwoliła ograniczyć wpływ najbardziej skrajnych obserwacji (ok. `r round(mean(x != x_p) * 100, 2)`% danych dla zmiennej o najwyższym skewness), zachowując jednocześnie strukturę zmienności istotną dla dalszych analiz wielowymiarowych. Pozwoliło to zmniejszyć wpływ ekstremów bez utraty istotnych obserwacji oraz uniknąć nadmierną modyfikację danych, charakterystyczną dla reguły IQR w przypadku rozkładów silnie skośnych.
 :::
 
-
 ### 3.2.3. Ograniczenie zmiennych "z góry"
 
 ```{r obcięcie górnego ogona, echo=FALSE}
@@ -1250,7 +1249,6 @@ hotel_clean <- hotel_clean %>%
 ::: {style="text-align: justify;"}
 Zmienne takie, jak *liczba_niemowląt*, *liczba_zmian_rezerwacji*, *wcześniejsze_rezerwacje_nieodwołane* i *wcześniejsze_odwołania*, w których zdecydowana większość obserwacji przyjmowała wartość 0, nie zostały poddane klasycznej winsoryzacji percentylowej, ponieważ mogłoby to prowadzić do utraty informacji lub powstania wartości NA. W ich przypadku zastosowano jedynie kontrolowane ograniczenie najwyższych wartości, co pozwoliło zmniejszyć wpływ pojedynczych obserwacji skrajnych na analizę PCA i skupień, bez zmiany interpretacji tych zmiennych.
 :::
-
 
 ### 3.2.4. Pozostawienie istotnych wartości odstających
 
@@ -1349,7 +1347,7 @@ opis
 
 
 # 4. Obróbka zmiennych
-## 3.1. Tworzenie nowych zmiennych
+## 4.1. Tworzenie nowych zmiennych
 :::  {style="text-align: justify;"}
 Do zbioru dodano nową zmienną - *zmiana_pokoju*, która sprawdza, czy rodzaj przydzielonego pokoju różnił się od pokoju pierwotnie zarezerwowanego przez klienta. Przyjmuje następujące wartości:
 
@@ -1402,7 +1400,7 @@ data.frame(
   datatable(caption = "Nowe zmienne", rownames = FALSE, options = list(paging = FALSE, dom = 't'))
 ```
 
-## 3.2. Usuwanie zmiennych 
+## 4.2. Usuwanie zmiennych 
 :::  {style="text-align: justify;"}
 Ze zbioru danych wykluczono zmienne, które ze względu na konieczność ochrony danch osobowych klientów, utowrzono sztucznie, a które uznano za nieistotne informacyjnie przy analizie głównych składowych (PCA) oraz analizie skupień. 
 
@@ -1419,7 +1417,6 @@ Usunięte zmienne to:
 - *data_statusu_rezerwacji* – zmienna opisująca stan rezerwacji po jej realizacji,
 
 - *kraj_pochodzenia* – zmienna o bardzo dużej liczbie kategorii.
-
 
 We wcześniejszych etapach analizy usunięto także zmienne *firma* oraz *agent_rezerwacji* ze względu na wsytępowanie wartości NA oraz nie wnoszenie istotnych informacji do analizy (zmienne bez znaczenia liczbowego, zawierające numery ID firm oraz agencji rezerwujących pokoje).
 
@@ -1448,8 +1445,7 @@ hotel_clean <- hotel_clean %>%
   select(-all_of(do_usuniecia))
 ```
 
-
-## 3.3. Standaryzacja i normalizacja
+## 4.3. Standaryzacja i normalizacja
 
 :::  {style="text-align: justify;"}
 Zmienne ilościowe zostały poddane standaryzacji metodą Z-score w celu zapewnienia porównywalności skal oraz równoważnego wpływu zmiennych na wyniki wybranych metod analizy (PCA oraz analiza skupień). 
@@ -1497,9 +1493,9 @@ hotel_std$liczba_niemowląt <- hotel_clean$liczba_niemowląt
 Finalny zbiór po obróbce zawiera `r nrow(hotel_std)` obserwacji i `r ncol(hotel_std)` zmiennych.
 :::
 
-# 4. ZASTOSOWANIE METOD WIELOWYMIAROWYCH
+# 5. ZASTOSOWANIE METOD WIELOWYMIAROWYCH
 
-## 4.1. PCA – Analiza głównych składowych
+## 5.1. PCA – Analiza głównych składowych
 
 :::  {style="text-align: justify;"}
 W celu redukcji wymiarowości i zbadania struktury danych ilościowych w zbiorze, zastosowano **analizę głównych składowych** ***(PCA – Principal Component Analysis)***. Jest to metoda statystyczna, która przekształca oryginalne zmienne w nowe, nieskorelowane czynniki, zwane *składowymi głównymi*. Składowe te są uporządkowane na podstawie malejącego udziału objaśniania całkowitej wariancji danych, co pozwala na wydobycie z nich najbardziej istotnych informacji przy użyciu mniejszej liczby wymiarów.
@@ -1517,7 +1513,7 @@ Ze względu na dużą liczbę obserwacji (116 661), aby uniknąć overplottingu,
 Do analizy włączono `r length(zmienne_ilosciowe)` zmiennych ilościowych, wybranych z pierwotnego zbioru zawierającego `r ncol(hotel_std)` zmiennych. Pozostałe zmienne, ze względu na charakter jakościowy, nie zostały uwzględnione w procedurze PCA.
 :::
 
-### 4.1.1. Sprawdzenie założeń analizy PCA
+### 5.1.1. Sprawdzenie założeń analizy PCA
 
 ***1) Macierz korelacji***
 
@@ -1580,8 +1576,7 @@ Według ogólnie przyjmowanych progów dla MSA, tj.:
 można uznać, że warto wykonać analizę głównych składowych dla analizowanych zmiennych, gdyż wynoszą one w większości wiecej lub blisko 0,5. Potwierdza to również *Overall MSA* wynoszące 0,58.
 :::
 
-
-### 4.1.2. Określenie liczby składowych do redukcji
+### 5.1.2. Określenie liczby składowych do redukcji
 
 ```{r pca, include=FALSE}
 pca <- prcomp(hotel_std[zmienne_ilosciowe], center = TRUE, scale. = TRUE)
@@ -1621,8 +1616,7 @@ fviz_screeplot(pca, addlabels=TRUE)
 Na podstawie powyższej analizy uznano, że najbardziej dopasowaną liczbą wymiarów, do których należy zredukować analizowane zmienne to **3**.
 :::
 
-
-##@ 4.1.3. Interpretacja wyników PCA
+### 5.1.3. Interpretacja wyników PCA
 
 ```{r ładunki czynnikowe, echo=FALSE}
 pcaVars <- get_pca_var(pca)
@@ -1810,13 +1804,7 @@ cos2_3 +
 ***Wymiar 3.*** natomiast objaśnił głównie zmienność *liczby zmian rezerwacji* (w 54,9%) oraz *liczby nocy* (w 30,9%).
 :::
 
-
-
-## 4.2 Analiza skupień
-
-library(NbClust) 
-library(factoextra)
-library(cluster) 
+## 5.2. Analiza skupień
 
 ::: {style="text-align: justify;"} 
 W kolejnym etapie przeprowadzono **analizę skupień** z wykorzystaniem metody podziału rozłącznego - metody ***k-średnich (k-means)***. Polega ona na podziale zbioru obserwacji na określoną liczbę jednorodnych grup w taki sposób, aby obiekty wewnątrz klastrów były do siebie jak najbardziej podobne, natomiast różniły się maksymalnie od obiektów z pozostałych skupień. Dzieje się to za sprawą minimalizacji sumy kwadratów odległości obserwacji od centroidów klastrów, a co pozwala dokonać najbardziej skutecznego grupowania danych.
@@ -1849,8 +1837,8 @@ W kolejnych etapach dokonano:
     uzyskanych skupień.
 :::::::::::::
 
-### 4.2.1. Określanie optymalnej liczby skupień
-
+### 5.2.1. Określanie optymalnej liczby skupień
+::: {style="text-align: justify;"}
 *Z uwagi na bardzo dużą liczebność zbioru danych, obliczenia znajdujące
 się w tym kroku zostały przeprowadzone na losowej próbie obejmującej
 5000 obserwacji. Próba ta była konieczna, ponieważ funkcje służące do
@@ -1860,7 +1848,7 @@ możliwości obliczeniowe programu R. Dodatkowo podjęto próbę
 wykorzystania pakietu NbClust, jednak nawet po ograniczeniu liczby
 obserwacji funkcja ta nie zadziałała poprawnie z uwagi na zbyt dużą
 złożoność obliczeń.*
-
+::::
 ```{r Próbka, include=FALSE}
 # Definowanie losowej próbki ze zbioru hotel_std
 #set.seed(123)  # ustawianie powtarzalności próbki dla dalszych 
