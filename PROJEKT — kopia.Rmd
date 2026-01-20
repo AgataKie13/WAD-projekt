@@ -121,6 +121,8 @@ czynniki stymulujące, jak i hamujące rezerwacje.
 
 -   *is_canceled*
 
+Zmienna objaśniana została wyszczególniona w celu ułatwienia analizy rozkładów i zależności korelacyjnych. Jako główny wskaźnik analizowanego zjawiska umożliwia ocenę wpływu pozostałych zmiennych na jej wartości oraz identyfikację czynników odpowiadających za obserwowane zróżnicowanie danych. W dalszej części analizy odstąpiono od podziału na zmienną objaśnianą i objaśniające, ponieważ zastosowane metody (PCA oraz klasteryzacja) mają charakter eksploracyjny i służą identyfikacji struktury oraz zależności pomiędzy wszystkimi zmiennymi jednocześnie.
+
 ***Zmienne objaśniające:***
 
 *Stymulanty* - ich wzrost zmniejsza prawdopodobieństwo anulowania
@@ -382,36 +384,6 @@ binarne_tbl <- data.frame(
   row.names = NULL)
 
 # 4. Statystyki opisowe dla zmiennych kategorycznych
-categorical_summary <- function(df, vars) {
-  res <- data.frame()
-  for(v in vars) {
-    tbl <- table(df[[v]])
-    tbl <- sort(tbl, decreasing = TRUE)
-    top_values <- paste(names(tbl)[1:min(3, length(tbl))], collapse = ", ")
-    top_pct <- paste(round(prop.table(tbl[1:min(3, length(tbl))])*100, 2)[1:min(3, length(tbl))], collapse = "%, ")
-    tmp <- data.frame(
-      zmienna = as.character(v),
-      Najczęstsze = paste0(top_values, " (", top_pct, "%)")
-    )
-    res <- rbind(res, tmp)
-  }
-  return(res)
-}
-
-kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
-
-# 5. Wyświetlenie tabel
-ilosciowe_tbl %>%
-  datatable(caption = "Zmienne ilościowe", rownames = FALSE, options = list(paging = FALSE))
-
-binarne_tbl %>%
-  datatable(caption = "Zmienne binarne", rownames = FALSE, options = list(paging = FALSE))
-
-kategoryczne_tbl %>%
-  datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE))
-
-
-###### Propozycja obliczania i wyświetlania statystyk "Najczęstszych" dla zmiennych kategorycznych
 categorical_summary <- function(df, vars, top_n = 3) {
   res <- list()
 
@@ -436,11 +408,16 @@ categorical_summary <- function(df, vars, top_n = 3) {
 
 kategoryczne_tbl <- categorical_summary(hotel, zmienne_kategoryczne)
 
+# 5. Wyświetlenie tabel
+ilosciowe_tbl %>%
+  datatable(caption = "Zmienne ilościowe", rownames = FALSE, options = list(paging = FALSE))
+
+binarne_tbl %>%
+  datatable(caption = "Zmienne binarne", rownames = FALSE, options = list(paging = FALSE))
+
 kategoryczne_tbl %>%
   rename_with(~ c("%_Top1","%_Top2","%_Top3"), .cols = c(Top1_pct, Top2_pct, Top3_pct)) %>%
   datatable(caption = "Zmienne kategoryczne", rownames = FALSE, options = list(paging = FALSE, columnDefs = list(list(className = 'dt-center', targets = 1:6))))
-        
-######
 ```
 
 ::: {style="text-align: justify;"}
@@ -456,14 +433,10 @@ etapach przetwarzania danych.
 W zbiorze znajdują się również dwie **zmienne binarne**: zmienna
 objaśniana *odwołanie_rezerwacji* oraz zmienna objaśniająca
 *powracający_gość*. Kolumna Procent_1 przedstawia odsetek obserwacji, w
-których zmienna przyjmuje wartość 1, co pozwala na wyciągnięcie
-pierwszych istotnych wniosków.
+których zmienna przyjmuje wartość 1. Rezerwację odwołało niecałe 38% gości, a zaledwie 3,19% odwiedzających powraca do tego hotelu.
 
 **Zmienne kategoryczne** opisano pod względem najczęściej występujących
 wartości wraz z ich udziałem w całym zbiorze.
-
-
-TU TRZEBABY DODAĆ JESZCZE FAKTYCZNY OPIS TYCH STATYSTYK (CHYBA)
 :::
 
 ## 2.2. Analiza rozkładów
@@ -714,6 +687,9 @@ korelacji.
 
 ### 2.3.1. Testy istotności korelacji
 
+H0: Nie istnieje istotna statystycznie korelacja pomiędzy porównywanymi zmiennymi (r = 0).
+HA: Istnieje istotna statystycznie korelacja pomiędzy porównywanymi zmiennymi (r ≠ 0).
+
 ```{r istotność korelacji, echo=FALSE}
 cat("\n2. TESTY ISTOTNOŚCI KORELACJI:\n")
 cat("\n2.1. Test istotności korelacji zmiennych liczba nocy weekendowych oraz liczba nocy tygodniowych:\n")
@@ -759,12 +735,20 @@ cor_test_results2 <- cor.test(hotel$liczba_nocy_weekendowych, hotel$liczba_nocy_
 r = `r round(cor_test_results2$estimate, 3)`
 p-value = `r round(cor_test_results2$p.value, 5)`
 
+::: {style="text-align: justify;"}
+Współczynnik korelacji r = `r round(cor_test_results2$estimate, 3)` wskazuje na umiarkowaną dodatnią zależność między zmiennymi. Bardzo niska wartość p-value (≈ 0) pozwala odrzucić hipotezę zerową, co oznacza, że dłuższe pobyty obejmujące weekend częściej wiążą się również z większą liczbą nocy w dni robocze.
+:::
+
 2. Test istotności korelacji zmiennych *liczba_specjalnych_próśb* oraz *odwołanie_rezerwacji*:
 ```{r testy istotności korelacji 2, include=FALSE}
 cor_test_results2 <- cor.test(hotel$liczba_specjalnych_próśb, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
 p-value = `r round(cor_test_results2$p.value, 5)`
+
+::: {style="text-align: justify;"}
+Ujemna korelacja (r = `r round(cor_test_results2$estimate, 3)`) oznacza słabą, lecz istotną zależność – im więcej specjalnych próśb, tym mniejsze prawdopodobieństwo odwołania rezerwacji. Wartość p-value ≈ 0 potwierdza istotność statystyczną tej relacji.
+:::
 
 3. Test istotności korelacji zmiennych *wymagane_miejsca_parkingowe* oraz *odwołanie_rezerwacji*:
 ```{r testy istotności korelacji 3, include=FALSE}
@@ -773,12 +757,20 @@ cor_test_results2 <- cor.test(hotel$wymagane_miejsca_parkingowe, hotel$odwołani
 r = `r round(cor_test_results2$estimate, 3)`
 p-value = `r round(cor_test_results2$p.value, 5)`
 
+::: {style="text-align: justify;"}
+Wartość r = `r round(cor_test_results2$estimate, 3)` wskazuje na słabą ujemną korelację. Istotne statystycznie p-value sugeruje, że klienci wymagający miejsc parkingowych rzadziej odwołują rezerwacje.
+:::
+
 4. Test istotności korelacji zmiennych *czas_wyprzedzenia_rezerwacji* oraz *odwołanie_rezerwacji*:
 ```{r testy istotności korelacji 4, include=FALSE}
 cor_test_results2 <- cor.test(hotel$czas_wyprzedzenia_rezerwacji, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
 p-value = `r round(cor_test_results2$p.value, 5)`
+
+::: {style="text-align: justify;"}
+Dodatnia korelacja r = `r round(cor_test_results2$estimate, 3)` oznacza słabą do umiarkowanej zależność – im wcześniejsza rezerwacja, tym większe prawdopodobieństwo jej odwołania. Niska wartość p-value potwierdza istotność statystyczną wyniku.
+:::
 
 5. Test istotności korelacji zmiennych *wcześniejsze_odwołania* oraz *odwołanie_rezerwacji*:
 ```{r testy istotności korelacji 5, include=FALSE}
@@ -787,12 +779,20 @@ cor_test_results2 <- cor.test(hotel$wcześniejsze_odwołania, hotel$odwołanie_r
 r = `r round(cor_test_results2$estimate, 3)`
 p-value = `r round(cor_test_results2$p.value, 5)`
 
+::: {style="text-align: justify;"}
+Współczynnik r = `r round(cor_test_results2$estimate, 3)` wskazuje na bardzo słabą, lecz dodatnią zależność. Pomimo niskiej siły korelacji, wynik jest istotny statystycznie, co sugeruje, że klienci z historią odwołań nieznacznie częściej anulują kolejne rezerwacje.
+:::
+
 6. Test istotności korelacji zmiennych *liczba_zmian_rezerwacji* oraz *odwołanie_rezerwacji*:
 ```{r testy istotności korelacji 6, include=FALSE}
 cor_test_results2 <- cor.test(hotel$liczba_zmian_rezerwacji, hotel$odwołanie_rezerwacji)
 ```
 r = `r round(cor_test_results2$estimate, 3)`
 p-value = `r round(cor_test_results2$p.value, 5)`
+
+::: {style="text-align: justify;"}
+Ujemna korelacja r = `r round(cor_test_results2$estimate, 3)` wskazuje na słabą zależność – większa liczba zmian rezerwacji wiąże się z mniejszym prawdopodobieństwem jej odwołania. Istotność statystyczna potwierdzona niskim p-value.
+:::
 
 7. Test istotności korelacji zmiennych *powracający_gość* oraz *odwołanie_rezerwacji*:
 ```{r testy istotności korelacji 7, include=FALSE}
@@ -801,6 +801,9 @@ cor_test_results2 <- cor.test(hotel$powracający_gość, hotel$odwołanie_rezerw
 r = `r round(cor_test_results2$estimate, 3)`
 p-value = `r round(cor_test_results2$p.value, 5)`
 
+::: {style="text-align: justify;"}
+Bardzo słaba ujemna korelacja (r = `r round(cor_test_results2$estimate, 3)`) wskazuje, że powracający goście nieco rzadziej odwołują rezerwacje. Mimo niewielkiej siły zależności, wynik jest istotny statystycznie.
+:::
 
 ::: {style="text-align: justify;"}
 Analiza korelacji wykazała, że wszystkie badane zależności są istotne
@@ -1920,7 +1923,7 @@ Statystyka GAP w danym przypadku nie jest jednoznaczna we wskazaniu optymalnej l
 Uznano więc, że wskazana liczba zna
 :::
 
-### 4.2.2. Właściwa analiza *k-means*
+### 5.2.2. Właściwa analiza *k-means*
 
 ```{r k-means, echo=FALSE}
 # Klasteryzacja metodą k-średnich z podziałem na 6 skupień
@@ -1931,7 +1934,7 @@ hotel_k6 <- kmeans(hotel_std[zmienne_ilosciowe], centers = 2, nstart = 25)
 ...
 :::
 
-### 4.2.3. Analiza centrów klastrów
+### 5.2.3. Analiza centrów klastrów
 
 ```{r}
 # Wyświetlenie centroidów klastrów (wartości w skali standaryzowanej)
@@ -1957,7 +1960,7 @@ ggplot(centers_melt, aes(x = variable, y = factor(Cluster), fill = value)) +
 ...
 :::
 
-### 4.2.4. Przypisanie obserwacji do klastrów
+### 5.2.4. Przypisanie obserwacji do klastrów
 
 ```{r przypisanie numeru klastra do obserwacji, echo=FALSE}
 # Dołączenie informacji o przypisaniu obserwacji do klastrów
@@ -2005,7 +2008,7 @@ legend("topright", legend = paste0("Klaster ", hotel_centers$Group), bty = "n", 
 ...
 :::
 
-### 4.2.5. Wizualizacja wyników segmentacji
+### 5.2.5. Wizualizacja wyników segmentacji
 
 ```{r wizualizacja wyników analizy, echo=FALSE}
 # Wizualizacja wyników klasteryzacji w przestrzeni wielowymiarowej (dwa wymiary)
@@ -2022,7 +2025,6 @@ zróżnicowanych profili rezerwacji, a zastosowanie metody k-means można
 uznać za uzasadnione i efektywne w kontekście analizowanego zbioru.
 :::
 
-
 ```{r wykres rozrzutu dla dwóch wybranych zmiennych, echo=FALSE}
 # Konwersja numeru grupy na zmienną kategoryczną
 hotel_group$Group <- as.factor(hotel_group$Group)
@@ -2038,10 +2040,10 @@ ggscatter(x = "liczba_nocy", y = "Liczba_osób", color = "Group", data = hotel_g
 
 #3) statystyka gap
 
-# 5. PORÓWNANIE METOD I WIZUALIZACJA WYNIKÓW
+# 6. PORÓWNANIE METOD I WIZUALIZACJA WYNIKÓW
 
 Porównane zostaną wyniki PCA i klasteryzacji, a także ich interpretacje.
 Wizualizacje obejmą m.in. biploty, wykresy skupień oraz wykresy 2D/3D
 (każdy wykres powinien mieć opis i krótki komentarz)
 
-# 6. Wnioski z analizy
+# 7. Wnioski z analizy
